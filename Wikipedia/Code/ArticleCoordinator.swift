@@ -1,11 +1,11 @@
 import UIKit
 
-
 @objc
 public enum ArticleSource: Int {
-    case search
-    case history
-    case places
+    case undefined = 0
+    case search = 1
+    case history = 4
+    case places = 9
 }
 
 @objc(WMFArticleCoordinator)
@@ -14,7 +14,6 @@ final public class ArticleCoordinator: NSObject, Coordinator {
     // MARK: Coordinator Protocol Properties
 
     var navigationController: UINavigationController
-
 
     // MARK: Properties 
 
