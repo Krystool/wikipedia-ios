@@ -16,9 +16,10 @@ final public class ArticleCoordinator: NSObject, Coordinator {
 
     // MARK: Properties
 
-    private let articleURL: URL
-    private let dataStore: MWKDataStore
-    private let theme: Theme
+    let articleURL: URL
+    let dataStore: MWKDataStore
+    let theme: Theme
+    let source: ArticleSource
     private let schemeHandler: SchemeHandler?
     private let altTextExperimentViewModel: WMFAltTextExperimentViewModel?
     private let needsAltTextExperimentSheet: Bool
@@ -31,6 +32,7 @@ final public class ArticleCoordinator: NSObject, Coordinator {
          dataStore: MWKDataStore,
          articleURL: URL,
          theme: Theme,
+         source: ArticleSource,
          schemeHandler: SchemeHandler? = nil,
          altTextExperimentViewModel: WMFAltTextExperimentViewModel? = nil,
          needsAltTextExperimentSheet: Bool = false,
@@ -41,6 +43,7 @@ final public class ArticleCoordinator: NSObject, Coordinator {
         self.dataStore = dataStore
         self.articleURL = articleURL
         self.theme = theme
+        self.source = source
         self.schemeHandler = schemeHandler
         self.altTextExperimentViewModel = altTextExperimentViewModel
         self.needsAltTextExperimentSheet = needsAltTextExperimentSheet
@@ -56,6 +59,7 @@ final public class ArticleCoordinator: NSObject, Coordinator {
                 articleURL: articleURL,
                 dataStore: dataStore,
                 theme: theme,
+                source: source,
                 schemeHandler: schemeHandler,
                 altTextExperimentViewModel: altTextExperimentViewModel,
                 needsAltTextExperimentSheet: needsAltTextExperimentSheet,
@@ -68,6 +72,7 @@ final public class ArticleCoordinator: NSObject, Coordinator {
                 articleURL: articleURL,
                 dataStore: dataStore,
                 theme: theme,
+                source: source,
                 schemeHandler: schemeHandler
             )
         }
