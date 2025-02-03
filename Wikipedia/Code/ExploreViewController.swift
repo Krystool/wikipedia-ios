@@ -596,7 +596,7 @@ class ExploreViewController: ColumnarCollectionViewController, ExploreCardViewCo
             return
         }
         
-        if let vc = group.detailViewControllerForPreviewItemAtIndex(0, dataStore: dataStore, theme: theme) {
+        if let vc = group.detailViewControllerForPreviewItemAtIndex(0, dataStore: dataStore, theme: theme, source: .undefined) {
             if vc is WMFImageGalleryViewController {
                 present(vc, animated: true)
             } else {
@@ -734,7 +734,7 @@ class ExploreViewController: ColumnarCollectionViewController, ExploreCardViewCo
     func exploreCardViewController(_ exploreCardViewController: ExploreCardViewController, didSelectItemAtIndexPath indexPath: IndexPath) {
         guard
             let contentGroup = exploreCardViewController.contentGroup,
-            let vc = contentGroup.detailViewControllerForPreviewItemAtIndex(indexPath.row, dataStore: dataStore, theme: theme, imageRecDelegate: self, imageRecLoggingDelegate: self) else {
+            let vc = contentGroup.detailViewControllerForPreviewItemAtIndex(indexPath.row, dataStore: dataStore, theme: theme, source: .undefined, imageRecDelegate: self, imageRecLoggingDelegate: self) else {
             return
         }
         
@@ -853,7 +853,7 @@ class ExploreViewController: ColumnarCollectionViewController, ExploreCardViewCo
     func viewController(for contentGroup: WMFContentGroup, at itemIndex: Int) -> UIViewController? {
         previewed.context = contentGroup
 
-        if let viewControllerToCommit = contentGroup.detailViewControllerForPreviewItemAtIndex(itemIndex, dataStore: dataStore, theme: theme) {
+        if let viewControllerToCommit = contentGroup.detailViewControllerForPreviewItemAtIndex(itemIndex, dataStore: dataStore, theme: theme, source: .undefined) {
             if let potd = viewControllerToCommit as? WMFImageGalleryViewController {
                 potd.setOverlayViewTopBarHidden(true)
             } else if let avc = viewControllerToCommit as? ArticleViewController {
@@ -1460,7 +1460,7 @@ extension ExploreViewController: WMFImageRecommendationsDelegate {
               let navigationController else {
             return
         }
-        let articleCoordinator = ArticleCoordinator(navigationController: navigationController, dataStore: dataStore, articleURL: articleURL, theme: theme)
+        let articleCoordinator = ArticleCoordinator(navigationController: navigationController, dataStore: dataStore, articleURL: articleURL, theme: theme, source: .undefined)
         articleCoordinator.start()
     }
     

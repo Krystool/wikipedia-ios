@@ -173,16 +173,16 @@ class ArticleViewController: ThemeableViewController, HintPresenting, UIScrollVi
     
     // Will be populated if needsSearchBar = false
     private var searchBarButtonItem: UIBarButtonItem?
-
-    convenience init?(articleURL: URL, dataStore: MWKDataStore, theme: Theme, schemeHandler: SchemeHandler? = nil, altTextExperimentViewModel: WMFAltTextExperimentViewModel, needsAltTextExperimentSheet: Bool, altTextBottomSheetViewModel: WMFAltTextExperimentModalSheetViewModel?, altTextDelegate: AltTextDelegate?) {
-        self.init(articleURL: articleURL, dataStore: dataStore, theme: theme)
+ 
+    convenience init?(articleURL: URL, dataStore: MWKDataStore, theme: Theme, source: ArticleSource, schemeHandler: SchemeHandler? = nil, altTextExperimentViewModel: WMFAltTextExperimentViewModel, needsAltTextExperimentSheet: Bool, altTextBottomSheetViewModel: WMFAltTextExperimentModalSheetViewModel?, altTextDelegate: AltTextDelegate?) {
+        self.init(articleURL: articleURL, dataStore: dataStore, theme: theme, source: source)
         self.altTextExperimentViewModel = altTextExperimentViewModel
         self.altTextBottomSheetViewModel = altTextBottomSheetViewModel
         self.needsAltTextExperimentSheet = needsAltTextExperimentSheet
         self.altTextDelegate = altTextDelegate
     }
     
-    @objc init?(articleURL: URL, dataStore: MWKDataStore, theme: Theme, schemeHandler: SchemeHandler? = nil) {
+    @objc init?(articleURL: URL, dataStore: MWKDataStore, theme: Theme, source: ArticleSource, schemeHandler: SchemeHandler? = nil) {
 
         guard let article = dataStore.fetchOrCreateArticle(with: articleURL) else {
                 return nil
