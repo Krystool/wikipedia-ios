@@ -56,6 +56,10 @@ class HistoryViewController: ArticleFetchedResultsViewController, WMFNavigationB
         return .sections
     }
 
+    override var articleSource: ArticleSource {
+        return .history
+    }
+
     override func setupFetchedResultsController(with dataStore: MWKDataStore) {
         let articleRequest = WMFArticle.fetchRequest()
         articleRequest.predicate = NSPredicate(format: "viewedDate != NULL")
@@ -251,7 +255,7 @@ class HistoryViewController: ArticleFetchedResultsViewController, WMFNavigationB
             return
         }
 
-        let userInfo: [AnyHashable:Any]? = [ArticleSourceUserInfoKeys.articleSource: ArticleSource.history.rawValue]
+        let userInfo: [AnyHashable:Any]? = [ArticleSourceUserInfoKeys.articleSource: ArticleSource.history.rawValue] // maybe update here as well
         navigate(to: articleURL, userInfo: userInfo)
     }
 

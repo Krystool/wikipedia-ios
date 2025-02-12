@@ -37,7 +37,11 @@ class ColumnarCollectionViewController: ThemeableViewController, ColumnarCollect
     open var addsCollectionView: Bool {
         return true
     }
-    
+
+    open var articleSource: ArticleSource {
+        return .undefined
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
@@ -435,16 +439,19 @@ extension ColumnarCollectionViewController: UICollectionViewDelegate {
 // MARK: - CollectionViewContextMenuShowing
 extension ColumnarCollectionViewController {
     func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
-        guard let contextMenuCollectionVC = self as? CollectionViewContextMenuShowing, let vc = contextMenuCollectionVC.previewingViewController(for: indexPath, at: point) else {
+        guard let contextMenuCollectionVC = self as? CollectionViewContextMenuShowing, let vc = contextMenuCollectionVC.previewingViewController(for: indexPath, at: point, source: self.articleSource) else {
             return nil
         }
         let previewProvider: () -> UIViewController? = {
             return vc
         }
         return UIContextMenuConfiguration(identifier: nil, previewProvider: previewProvider) { (suggestedActions) -> UIMenu? in
-            guard let previewActions = (vc as? ArticleViewController)?.contextMenuItems else {
+            guard let articleVC = (vc as? ArticleViewController) else {
                 return nil
             }
+            articleVC.articleViewSource = self.articleSource
+            let previewActions = articleVC.contextMenuItems
+            
             return UIMenu(title: "", image: nil, identifier: nil, options: [], children: previewActions)
         }
     }

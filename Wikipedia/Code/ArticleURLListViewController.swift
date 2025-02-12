@@ -90,8 +90,8 @@ class ArticleURLListViewController: ArticleCollectionViewController, WMFNavigati
     }
 
     // MARK: - CollectionViewContextMenuShowing
-    override func previewingViewController(for indexPath: IndexPath, at location: CGPoint) -> UIViewController? {
-        let vc = super.previewingViewController(for: indexPath, at: location)
+    override func previewingViewController(for indexPath: IndexPath, at location: CGPoint, source: ArticleSource) -> UIViewController? {
+        let vc = super.previewingViewController(for: indexPath, at: location, source: source)
         return vc
     }
 

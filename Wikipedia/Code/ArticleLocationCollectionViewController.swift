@@ -12,7 +12,7 @@ class ArticleLocationCollectionViewController: ColumnarCollectionViewController,
     private var previewedIndexPath: IndexPath?
     private let contentGroup: WMFContentGroup?
     private let needsCloseButton: Bool
-    var articleSource: ArticleSource
+    var _articleSource: ArticleSource
 
     let contentGroupIDURIString: String?
 
@@ -22,7 +22,7 @@ class ArticleLocationCollectionViewController: ColumnarCollectionViewController,
         self.contentGroup = contentGroup
         contentGroupIDURIString = contentGroup?.objectID.uriRepresentation().absoluteString
         self.needsCloseButton = needsCloseButton
-        self.articleSource = source
+        self._articleSource = source
         super.init(nibName: nil, bundle: nil)
         self.theme = theme
         if needsCloseButton {
@@ -36,13 +36,17 @@ class ArticleLocationCollectionViewController: ColumnarCollectionViewController,
         self.contentGroup = nil
         self.contentGroupIDURIString = nil
         self.needsCloseButton = false
-        self.articleSource = .undefined
+        self._articleSource = .undefined
         super.init(coder: aDecoder)
         if needsCloseButton {
             hidesBottomBarWhenPushed = true
         }
     }
-    
+
+    override var articleSource: ArticleSource {
+        return _articleSource
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         layoutManager.register(ArticleLocationCollectionViewCell.self, forCellWithReuseIdentifier: ArticleLocationCollectionViewCell.identifier, addPlaceholder: true)
@@ -195,6 +199,7 @@ extension ArticleLocationCollectionViewController {
 
 // MARK: - CollectionViewContextMenuShowing
 extension ArticleLocationCollectionViewController: CollectionViewContextMenuShowing {
+    
     func articleViewController(for indexPath: IndexPath) -> ArticleViewController? {
         
         let articleURL = articleURL(at: indexPath)
@@ -202,11 +207,12 @@ extension ArticleLocationCollectionViewController: CollectionViewContextMenuShow
         return articleViewController
     }
 
-    func previewingViewController(for indexPath: IndexPath, at location: CGPoint) -> UIViewController? {
+    func previewingViewController(for indexPath: IndexPath, at location: CGPoint, source: ArticleSource) -> UIViewController? {
         guard let articleViewController = articleViewController(for: indexPath) else {
             return nil
         }
         let articleURL = articleViewController.articleURL
+        articleViewController.articleViewSource = source
         articleViewController.articlePreviewingDelegate = self
         articleViewController.wmf_addPeekableChildViewController(for: articleURL, dataStore: dataStore, theme: theme)
 

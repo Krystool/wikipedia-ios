@@ -496,7 +496,11 @@ class SearchViewController: ArticleCollectionViewController, WMFNavigationBarCon
     override var headerStyle: ColumnarCollectionViewController.HeaderStyle {
         return .sections
     }
-    
+
+    override var articleSource: ArticleSource {
+        return .search
+    }
+
     func reloadRecentSearches() {
         collectionView.reloadData()
     }
