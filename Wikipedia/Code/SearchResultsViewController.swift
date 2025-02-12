@@ -21,7 +21,11 @@ class SearchResultsViewController: ArticleCollectionViewController {
         collectionView.reloadData()
         updateEmptyState()
     }
-    
+
+    override var articleSource: ArticleSource {
+        return .search
+    }
+
     var searchSiteURL: URL? = nil
     
     func isDisplaying(resultsFor searchTerm: String, from siteURL: URL) -> Bool {
