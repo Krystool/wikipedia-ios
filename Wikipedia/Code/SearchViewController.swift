@@ -821,7 +821,7 @@ class SearchViewController: ThemeableViewController, WMFNavigationBarConfiguring
 //    override func configure(header: CollectionViewHeader, forSectionAt sectionIndex: Int, layoutOnly: Bool) {
 //        header.style = .recentSearches
 //        header.apply(theme: theme)
-//        header.title = WMFLocalizedString("search-recent-title", value: "Recently searched", comment: "Title for list of recent search terms")
+//        header.title = 
 //        header.buttonTitle = countOfRecentSearches > 0 ? WMFLocalizedString("search-clear-title", value: "Clear", comment: "Text of the button shown to clear recent search terms") : nil
 //        header.delegate = self
 //    }

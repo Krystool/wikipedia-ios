@@ -125,7 +125,7 @@ class PlaceSearchSuggestionController: NSObject, UITableViewDataSource, UITableV
         case PlaceSearchSuggestionController.recentSection:
             header.isClearButtonHidden = false
             header.addClearButtonTarget(self, selector: #selector(clearButtonPressed))
-            header.text = WMFLocalizedString("places-search-recently-searched-header", value:"Recently searched", comment:"Recently searched - header for the list of recently searched items")
+            header.text = CommonStrings.recentlySearchedTitle
             header.clearButton.accessibilityLabel = WMFLocalizedString("places-accessibility-clear-saved-searches", value:"Clear saved searches", comment:"Accessibility hint for clearing saved searches")
         default:
             return nil

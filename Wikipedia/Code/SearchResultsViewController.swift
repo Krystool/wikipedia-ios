@@ -21,13 +21,16 @@ class SearchResultsViewController: ArticleCollectionViewController {
     private var recentlySearchedViewModel: WMFRecentlySearchedViewModel?
     lazy var recentlySearchedViewController: UIViewController = {
         
-        let recentSearchTerms: [WMFRecentlySearchedViewModel.Item] = [
-            WMFRecentlySearchedViewModel.Item(text: "Recently searched 1"),
-            WMFRecentlySearchedViewModel.Item(text: "Recently searched 2"),
-            WMFRecentlySearchedViewModel.Item(text: "Recently searched 3")
+        let recentSearchTerms: [WMFRecentlySearchedViewModel.SearchTerm] = [
+            WMFRecentlySearchedViewModel.SearchTerm(text: "Recently searched 1"),
+            WMFRecentlySearchedViewModel.SearchTerm(text: "Recently searched 2"),
+            WMFRecentlySearchedViewModel.SearchTerm(text: "Recently searched 3")
         ]
-        
-        let viewModel = WMFRecentlySearchedViewModel(recentSearchTerms: recentSearchTerms)
+        let locStrings = WMFRecentlySearchedViewModel.LocalizedStrings(
+            title: CommonStrings.recentlySearchedTitle,
+            clearButtonTitle: CommonStrings.clearTitle
+        )
+        let viewModel = WMFRecentlySearchedViewModel(recentSearchTerms: recentSearchTerms, localizedStrings: locStrings)
         self.recentlySearchedViewModel = viewModel
         let recentlySearchedView = WMFRecentlySearchedView(viewModel: viewModel)
         let hostingVC = UIHostingController(rootView: recentlySearchedView)
