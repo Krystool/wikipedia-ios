@@ -1,8 +1,18 @@
 import Foundation
 
 public final class WMFRecentlySearchedViewModel: ObservableObject {
-    
-    public struct Item: Identifiable {
+
+    public struct LocalizedStrings {
+        let title: String
+        let clearButtonTitle: String
+
+        public init(title: String, clearButtonTitle: String) {
+            self.title = title
+            self.clearButtonTitle = clearButtonTitle
+        }
+    }
+
+    public struct SearchTerm: Identifiable {
         let text: String
         
         public init(text: String) {
@@ -13,12 +23,14 @@ public final class WMFRecentlySearchedViewModel: ObservableObject {
             return text.hash
         }
     }
-    
-    public init(recentSearchTerms: [Item]) {
+    @Published var recentSearchTerms: [SearchTerm] = []
+    @Published public var topPadding: CGFloat = 0
+    public let localizedStrings: LocalizedStrings
+
+    public init(recentSearchTerms: [SearchTerm], localizedStrings: LocalizedStrings) {
         self.recentSearchTerms = recentSearchTerms
+        self.localizedStrings = localizedStrings
     }
     
-    @Published var recentSearchTerms: [Item] = []
-    @Published public var topPadding: CGFloat = 0
     
 }
