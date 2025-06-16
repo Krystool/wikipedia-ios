@@ -51,7 +51,10 @@ final class HtmlUtilsTests: XCTestCase {
             // Arabic
             "<a href=\"https://ar.wikipedia.org/wiki/مستخدم:اختبار\">اختبار</a>",
             // Hebrew
-            "<a href=\"https://he.wikipedia.org/wiki/משתמש:בדיקה\">בדיקה</a>"
+            "<a href=\"https://he.wikipedia.org/wiki/משתמש:בדיקה\">בדיקה</a>",
+            // Percent-encoded '%'
+            "<a href=\"https://en.wikipedia.org/wiki/Williams_%25R\">Williams %R</a>",
+            "<a href=\"https://pt.wikipedia.org/wiki/3%25\">3%</a>"
         ]
 
         for html in htmlSamples {
