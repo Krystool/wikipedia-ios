@@ -41,30 +41,117 @@ final class HtmlUtilsTests: XCTestCase {
             lineSpacing: 1
         )
 
-        let htmlSamples = [
+        let htmlSamples: [(html: String, expectedHref: String, expectedText: String)] = [
             // Portuguese
-            "<a href=\"https://pt.wikipedia.org/wiki/Usuário:Rpo.castro_(discussão)\">discussão</a>",
+            (
+                "<a href=\"https://pt.wikipedia.org/wiki/Usuário:Rpo.castro_(discussão)\">discussão</a>",
+                "https://pt.wikipedia.org/wiki/Usuário:Rpo.castro_(discussão)",
+                "discussão"
+            ),
             // Chinese
-            "<a href=\"https://zh.wikipedia.org/wiki/用戶:示例\">示例</a>",
+            (
+                "<a href=\"https://zh.wikipedia.org/wiki/用戶:示例\">示例</a>",
+                "https://zh.wikipedia.org/wiki/用戶:示例",
+                "示例"
+            ),
             // Japanese
-            "<a href=\"https://ja.wikipedia.org/wiki/利用者:テスト\">テスト</a>",
+            (
+                "<a href=\"https://ja.wikipedia.org/wiki/利用者:テスト\">テスト</a>",
+                "https://ja.wikipedia.org/wiki/利用者:テスト",
+                "テスト"
+            ),
             // Arabic
-            "<a href=\"https://ar.wikipedia.org/wiki/مستخدم:اختبار\">اختبار</a>",
+            (
+                "<a href=\"https://ar.wikipedia.org/wiki/مستخدم:اختبار\">اختبار</a>",
+                "https://ar.wikipedia.org/wiki/مستخدم:اختبار",
+                "اختبار"
+            ),
             // Hebrew
-            "<a href=\"https://he.wikipedia.org/wiki/משתמש:בדיקה\">בדיקה</a>",
+            (
+                "<a href=\"https://he.wikipedia.org/wiki/משתמש:בדיקה\">בדיקה</a>",
+                "https://he.wikipedia.org/wiki/משתמש:בדיקה",
+                "בדיקה"
+            ),
             // Percent-encoded '%'
-            "<a href=\"https://en.wikipedia.org/wiki/Williams_%25R\">Williams %R</a>",
-            "<a href=\"https://pt.wikipedia.org/wiki/3%25\">3%</a>"
+            (
+                "<a href=\"https://en.wikipedia.org/wiki/Williams_%25R\">Williams\u{00A0}%R</a>",
+                "https://en.wikipedia.org/wiki/Williams_%25R",
+                "Williams\u{00A0}%R"
+            ),
+            (
+                "<a href=\"https://pt.wikipedia.org/wiki/3%25\">3%</a>",
+                "https://pt.wikipedia.org/wiki/3%25",
+                "3%"
+            ),
+            (
+                "<a href=\"https://en.wikipedia.org/wiki/User_talk:Kwamikagami#Instruction_to_click_%22disable%22\">Instruction to click \"disable\"</a>",
+                "https://en.wikipedia.org/wiki/User_talk:Kwamikagami#Instruction_to_click_%22disable%22",
+                "Instruction to click \"disable\""
+            )
         ]
 
-        for html in htmlSamples {
-            let attributed = try HtmlUtils.nsAttributedStringFromHtml(html, styles: styles)
-            let linkCount = attributed
-                .attributes(at: 0, effectiveRange: nil)
-                .filter { $0.key == .link }
-                .count
+        for (html, expectedHref, expectedText) in htmlSamples {
+            try XCTContext.runActivity(named: html) { _ in
+                let attributed = try HtmlUtils.nsAttributedStringFromHtml(html, styles: styles)
+                let fullRange = NSRange(location: 0, length: attributed.length)
 
-            XCTAssertEqual(linkCount, 1, "Failed to detect link in: \(html)")
+                var found: [(url: URL, range: NSRange)] = []
+                attributed.enumerateAttribute(.link,
+                                              in: fullRange,
+                                              options: []) { value, range, _ in
+                    switch value {
+                    case let url as URL:
+                        found.append((url, range))
+                    case let str as String where URL(string: str) != nil:
+                        found.append((URL(string: str)!, range))
+                    default:
+                        break
+                    }
+                }
+
+                if found.count != 1 {
+                    let attrsAtZero = attributed.attributes(at: 0, effectiveRange: nil)
+                    XCTFail("Expected exactly 1 link but found \(found.count).\nAttributes at index 0: \(attrsAtZero)")
+                    return
+                }
+
+                let (url, range) = found[0]
+
+                XCTAssertEqual(range, fullRange,
+                               "Link range should cover the whole string, but was \(range)")
+
+                XCTAssertEqual(url, URL(string: expectedHref)!,
+                               "URL mismatch — got \(url), expected \(expectedHref)")
+
+                XCTAssertEqual(attributed.string, expectedText,
+                               "Anchor text mismatch — got “\(attributed.string)”, expected “\(expectedText)”")
+            }
         }
     }
+
+    func testNoLinksInPlainText() throws {
+        let largeTraitCollection = UITraitCollection(preferredContentSizeCategory: .large)
+        let styles = HtmlUtils.Styles(
+            font:  WMFFont.for(.callout, compatibleWith: largeTraitCollection),
+            boldFont: WMFFont.for(.boldCallout, compatibleWith: largeTraitCollection),
+            italicsFont: WMFFont.for(.italicCallout, compatibleWith: largeTraitCollection),
+            boldItalicsFont: WMFFont.for(.boldItalicCallout, compatibleWith: largeTraitCollection),
+            color: WMFTheme.light.text,
+            linkColor: WMFTheme.light.link,
+            lineSpacing: 1
+        )
+        let plain = "This is just text with no <a> tags."
+        let attributed = try HtmlUtils.nsAttributedStringFromHtml(plain, styles: styles)
+        let fullRange = NSRange(location: 0, length: attributed.length)
+        var linkCount = 0
+
+        attributed.enumerateAttribute(.link,
+                                      in: fullRange,
+                                      options: []) { value, _, _ in
+            if value != nil { linkCount += 1 }
+        }
+
+        XCTAssertEqual(linkCount, 0, "Plain text should not produce any .link attributes")
+    }
+
 }
