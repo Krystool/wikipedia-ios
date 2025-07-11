@@ -3,9 +3,10 @@ import SwiftUI
 import CocoaLumberjackSwift
 import WMFComponents
 import WMFData
+import WebKit
 
 @objc(WMFArticleViewController)
-class ArticleViewController: ThemeableViewController, HintPresenting, UIScrollViewDelegate, WMFNavigationBarConfiguring, WMFNavigationBarHiding {
+class ArticleViewController: ThemeableViewController, HintPresenting, UIScrollViewDelegate, WMFNavigationBarConfiguring, WMFNavigationBarHiding, UIPopoverPresentationControllerDelegate {
     enum ViewState {
         case initial
         case loading
@@ -226,6 +227,17 @@ class ArticleViewController: ThemeableViewController, HintPresenting, UIScrollVi
     lazy var webView: WKWebView = {
         let webView = WMFWebView(frame: .zero, configuration: webViewConfiguration)
         webView.translatesAutoresizingMaskIntoConstraints = false
+//        webView.allowsLinkPreview = true
+
+        // 2) Find and tweak WKWebView’s internal long-press recognizers
+        webView.gestureRecognizers?
+            .compactMap { $0 as? UILongPressGestureRecognizer }
+            .forEach { longPress in
+                // make it fire almost immediately on touch down
+                longPress.minimumPressDuration = 0.05
+                // don’t delay the touch event (so it still feels like a tap)
+                longPress.delaysTouchesBegan = false
+            }
         return webView
     }()
     
@@ -435,12 +447,22 @@ class ArticleViewController: ThemeableViewController, HintPresenting, UIScrollVi
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        let tap = UITapGestureRecognizer(target: self, action: #selector(didTapWebView(_:)))
+            tap.delegate = self
+            webView.addGestureRecognizer(tap)
 
         setup()
 
         setupForStateRestorationIfNecessary()
     }
-    
+
+    private var lastTapLocation: CGPoint = .zero
+
+    @objc private func didTapWebView(_ recognizer: UITapGestureRecognizer) {
+        lastTapLocation = recognizer.location(in: webView)
+    }
+
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         tableOfContentsController.setup(with: traitCollection)
@@ -1081,43 +1103,107 @@ class ArticleViewController: ThemeableViewController, HintPresenting, UIScrollVi
     
     // MARK: Overrideable functionality
     
-    internal func handleLink(with href: String) {
+//    internal func handleLink(with href: String) {
+//
+//        guard let resolvedURL = articleURL.resolvingRelativeWikiHref(href) else {
+//            showGenericError()
+//            return
+//        }
+//        // Check if this is the same article by comparing in-memory keys
+//        guard resolvedURL.wmf_inMemoryKey == articleURL.wmf_inMemoryKey else {
+//            
+//            let legacyNavigateAction = { [weak self] in
+//                let userInfo: [AnyHashable : Any] = [RoutingUserInfoKeys.source: RoutingUserInfoSourceValue.article.rawValue]
+//                self?.navigate(to: resolvedURL, userInfo: userInfo)
+//            }
+//            
+//            // first try to navigate using LinkCoordinator. If it fails, use the legacy approach.
+//            if let navigationController {
+//                
+//                let linkCoordinator = LinkCoordinator(navigationController: navigationController, url: resolvedURL, dataStore: dataStore, theme: theme, articleSource: .internal_link, previousPageViewObjectID: pageViewObjectID, tabConfig: .appendArticleAndAssignCurrentTabAndCleanoutFutureArticles)
+//                let success = linkCoordinator.start()
+//                guard success else {
+//                    legacyNavigateAction()
+//                    return
+//                }
+//            } else {
+//                legacyNavigateAction()
+//            }
+//            
+//            return
+//        }
+//        // Check for a fragment - if this is the same article and there's no fragment just do nothing?
+//        guard let anchor = resolvedURL.fragment?.removingPercentEncoding else {
+//            return
+//        }
+//
+//        scroll(to: anchor, animated: true)
+//    }
 
+    internal func handleLink(with href: String) {
         guard let resolvedURL = articleURL.resolvingRelativeWikiHref(href) else {
             showGenericError()
             return
         }
-        // Check if this is the same article by comparing in-memory keys
-        guard resolvedURL.wmf_inMemoryKey == articleURL.wmf_inMemoryKey else {
-            
-            let legacyNavigateAction = { [weak self] in
-                let userInfo: [AnyHashable : Any] = [RoutingUserInfoKeys.source: RoutingUserInfoSourceValue.article.rawValue]
-                self?.navigate(to: resolvedURL, userInfo: userInfo)
+
+        makePeekAndMenu(for: resolvedURL) { [weak self] peekVC, menu in
+            guard let self = self, let peekVC = peekVC, let menu = menu else {
+                // regular nav if fails
+                return
             }
-            
-            // first try to navigate using LinkCoordinator. If it fails, use the legacy approach.
-            if let navigationController {
-                
-                let linkCoordinator = LinkCoordinator(navigationController: navigationController, url: resolvedURL, dataStore: dataStore, theme: theme, articleSource: .internal_link, previousPageViewObjectID: pageViewObjectID, tabConfig: .appendArticleAndAssignCurrentTabAndCleanoutFutureArticles)
-                let success = linkCoordinator.start()
-                guard success else {
-                    legacyNavigateAction()
-                    return
-                }
-            } else {
-                legacyNavigateAction()
+            let btnFrame = CGRect(origin: self.lastTapLocation, size: .init(width: 1, height: 1))
+            let btn = UIButton(frame: btnFrame)
+            btn.sendActions(for: .touchUpInside)
+            btn.menu = menu
+
+            self.webView.addSubview(btn)
+            self.showPeekAndMenu(popoverFrom: btn, peekVC: peekVC, menu: menu)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                btn.removeFromSuperview()
             }
-            
-            return
+
         }
-        // Check for a fragment - if this is the same article and there's no fragment just do nothing?
-        guard let anchor = resolvedURL.fragment?.removingPercentEncoding else {
-            return
+    }
+
+    private func makePeekAndMenu(for linkURL: URL, completion: @escaping (_ peekVC: UIViewController?, _ menu: UIMenu?) -> Void) {
+
+        getPeekViewControllerAsync(for: linkURL) { peekVC in
+            guard let peekVC = peekVC else {
+                return completion(nil, nil)
+            }
+
+            let contextItems = (peekVC as? ArticlePeekPreviewViewController)?.contextMenuItems ?? []
+            let menu = UIMenu(title: "", image: nil, identifier: nil, options: [], children: contextItems)
+
+            completion(peekVC, menu)
+        }
+    }
+
+    private func showPeekAndMenu(popoverFrom button: UIButton,
+                                 peekVC: UIViewController,
+                                 menu: UIMenu) {
+
+        peekVC.modalPresentationStyle = .popover
+        peekVC.preferredContentSize = CGSize(width: 300, height: 400)
+        if let pop = peekVC.popoverPresentationController {
+            pop.delegate = self
+            pop.sourceView = button // trying to use a fake button for source
+            pop.sourceRect = button.bounds
+            pop.permittedArrowDirections = [.up, .down]
         }
 
-        scroll(to: anchor, animated: true)
+        present(peekVC, animated: true) {
+            button.showsMenuAsPrimaryAction = true
+            button.sendActions(for: .touchUpInside)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                button.removeFromSuperview()
+            }
+        }
     }
-    
+
+
     // MARK: Table of contents
     
     lazy var tableOfContentsController: ArticleTableOfContentsDisplayController = ArticleTableOfContentsDisplayController(articleView: webView, delegate: self, theme: theme)
