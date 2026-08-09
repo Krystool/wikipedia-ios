@@ -78,8 +78,7 @@ public class Session: NSObject {
     
     // event logging uuid, set if enabled, nil if disabled
     private var xWMFUUID: String? {
-        let userDefaults = UserDefaults.standard
-        return userDefaults.wmf_appInstallId
+        return try? WMFDataEnvironment.current.crossProcessUserDefaultsStore?.load(key: WMFUserDefaultsKey.appInstallID.rawValue)
     }
     
     private static let defaultCookieStorage: HTTPCookieStorage = {
@@ -153,13 +152,16 @@ public class Session: NSObject {
     
     @objc public func clearTemporaryCache() {
         defaultURLSession.configuration.urlCache?.removeAllCachedResponses()
+        WMFDataEnvironment.current.basicService?.clearCachedData()
     }
     
     /// The permanent cache to utilize for this session
     weak var permanentCache: PermanentCacheController? {
         didSet {
+            httpClient.invalidateAndCancel()
             defaultURLSession.finishTasksAndInvalidate()
             defaultURLSession = Session.getURLSession(with: permanentCache, delegate: sessionDelegate)
+            httpClient = httpClientProvider.httpClient(defaultURLSession: defaultURLSession, sessionDelegate: sessionDelegate)
         }
     }
     
@@ -174,11 +176,23 @@ public class Session: NSObject {
     public var defaultURLSession: URLSession
     private let sessionDelegate: SessionDelegate
     @objc weak var authenticationDelegate: SessionAuthenticationDelegate?
+    private let httpClientProvider: SessionHTTPClientProvider
+    private var httpClient: SessionHTTPClient
     
     @objc public required init(configuration: Configuration) {
         self.configuration = configuration
         self.sessionDelegate = SessionDelegate()
         self.defaultURLSession = Session.getURLSession(delegate: sessionDelegate)
+        self.httpClientProvider = SessionHTTPClientProviderConfiguration.httpClientProvider()
+        self.httpClient = httpClientProvider.httpClient(defaultURLSession: defaultURLSession, sessionDelegate: sessionDelegate)
+    }
+
+    init(configuration: Configuration, httpClientProvider: SessionHTTPClientProvider) {
+        self.configuration = configuration
+        self.sessionDelegate = SessionDelegate()
+        self.httpClientProvider = httpClientProvider
+        self.defaultURLSession = Session.getURLSession(delegate: sessionDelegate)
+        self.httpClient = httpClientProvider.httpClient(defaultURLSession: defaultURLSession, sessionDelegate: sessionDelegate)
     }
     
     @objc public static let sharedCookieStorage = HTTPCookieStorage.sharedCookieStorage(forGroupContainerIdentifier: WMFApplicationGroupIdentifier)
@@ -188,11 +202,13 @@ public class Session: NSObject {
     }
     
     @objc public func teardown() {
+        httpClient.invalidateAndCancel()
         guard defaultURLSession !== URLSession.shared else { // [NSURLSession sharedSession] may not be invalidated
             return
         }
         defaultURLSession.invalidateAndCancel()
         defaultURLSession = URLSession.shared
+        httpClient = httpClientProvider.httpClient(defaultURLSession: defaultURLSession, sessionDelegate: sessionDelegate)
     }
     
     public let wifiOnlyURLSession: URLSession = {
@@ -298,9 +314,7 @@ public class Session: NSObject {
             return nil
         }
         
-        let task = defaultURLSession.dataTask(with: request)
-        sessionDelegate.addCallback(callback: callback, for: task)
-        return task
+        return httpClient.dataTask(with: request, callback: callback)
     }
     
     public func dataTask(with request: URLRequest, completionHandler: @escaping (Data?, URLResponse?, Error?) -> Swift.Void) -> URLSessionDataTask? {
@@ -328,18 +342,18 @@ public class Session: NSObject {
             
         }
         
-        let task = defaultURLSession.dataTask(with: request, completionHandler: cachedCompletion)
+        let task = httpClient.dataTask(with: request, completionHandler: cachedCompletion)
         return task
     }
     
     // tonitodo: utlilize Callback & addCallback/session delegate stuff instead of completionHandler
     public func downloadTask(with url: URL, completionHandler: @escaping (URL?, URLResponse?, Error?) -> Void) -> URLSessionDownloadTask {
-        return defaultURLSession.downloadTask(with: url, completionHandler: completionHandler)
+        return httpClient.downloadTask(with: url, completionHandler: completionHandler)
     }
 
     public func downloadTask(with urlRequest: URLRequest, completionHandler: @escaping (URL?, URLResponse?, Error?) -> Void) -> URLSessionDownloadTask? {
 
-        return defaultURLSession.downloadTask(with: urlRequest, completionHandler: completionHandler)
+        return httpClient.downloadTask(with: urlRequest, completionHandler: completionHandler)
     }
     
     public func dataTask(with url: URL?, method: Session.Request.Method = .get, bodyParameters: Any? = nil, bodyEncoding: Session.Request.Encoding = .json, headers: [String: String] = [:], cachePolicy: URLRequest.CachePolicy? = nil, priority: Float = URLSessionTask.defaultPriority, completionHandler: @escaping (Data?, URLResponse?, Error?) -> Swift.Void) -> URLSessionDataTask? {
@@ -347,7 +361,7 @@ public class Session: NSObject {
             return nil
         }
         let dataRequest = request(with: url, method: method, bodyParameters: bodyParameters, bodyEncoding: bodyEncoding, headers: headers, cachePolicy: cachePolicy)
-        let task = defaultURLSession.dataTask(with: dataRequest, completionHandler: completionHandler)
+        let task = httpClient.dataTask(with: dataRequest, completionHandler: completionHandler)
         task.priority = priority
         return task
     }
@@ -356,7 +370,7 @@ public class Session: NSObject {
      Shared response handling for common status codes. Currently logs the user out and removes local credentials if a 401 is received
      and an attempt to re-login with stored credentials fails.
     */
-    private func handleResponse(_ response: URLResponse?, reattemptLoginOn401Response: Bool = true) {
+    private func handleResponse(_ response: URLResponse?, method: String? = nil, reattemptLoginOn401Response: Bool = true) {
         guard let response = response, let httpResponse = response as? HTTPURLResponse else {
             return
         }
@@ -369,6 +383,12 @@ public class Session: NSObject {
             }
         default:
             break
+        }
+
+        if httpResponse.isHTTPError {
+            ClientErrorFunnel.shared.logHTTPError(
+                info: WMFHTTPErrorInfo(statusCode: httpResponse.statusCode, method: method, url: response.url?.absoluteString, source: "Session")
+            )
         }
     }
     
@@ -387,7 +407,7 @@ public class Session: NSObject {
      */
     @discardableResult public func jsonDecodableTaskWithDecodableError<T: Decodable, E: Decodable>(with url: URL?, method: Session.Request.Method = .get, bodyParameters: Any? = nil, bodyEncoding: Session.Request.Encoding = .json, cachePolicy: URLRequest.CachePolicy? = nil, completionHandler: @escaping (_ result: T?, _ errorResult: E?, _ response: URLResponse?, _ error: Error?) -> Swift.Void) -> URLSessionDataTask? {
         guard let task = dataTask(with: url, method: method, bodyParameters: bodyParameters, bodyEncoding: bodyEncoding, cachePolicy: cachePolicy, completionHandler: { (data, response, error) in
-            self.handleResponse(response)
+            self.handleResponse(response, method: method.stringValue)
             guard let data = data else {
                 completionHandler(nil, nil, response, error)
                 return
@@ -436,7 +456,7 @@ public class Session: NSObject {
      */
     @discardableResult public func jsonDecodableTask<T: Decodable>(with url: URL?, method: Session.Request.Method = .get, bodyParameters: Any? = nil, bodyEncoding: Session.Request.Encoding = .json, headers: [String: String] = [:], cachePolicy: URLRequest.CachePolicy? = nil, priority: Float = URLSessionTask.defaultPriority, completionHandler: @escaping (_ result: T?, _ response: URLResponse?,  _ error: Error?) -> Swift.Void) -> URLSessionDataTask? {
         guard let task = dataTask(with: url, method: method, bodyParameters: bodyParameters, bodyEncoding: bodyEncoding, headers: headers, cachePolicy: cachePolicy, priority: priority, completionHandler: { (data, response, error) in
-            self.handleResponse(response)
+            self.handleResponse(response, method: method.stringValue)
             guard let data = data else {
                 completionHandler(nil, response, error)
                 return
@@ -463,7 +483,7 @@ public class Session: NSObject {
     @discardableResult public func jsonDecodableTask<T: Decodable>(with urlRequest: URLRequest, completionHandler: @escaping (_ result: T?, _ response: URLResponse?,  _ error: Error?) -> Swift.Void) -> URLSessionDataTask? {
         
         guard let task = dataTask(with: urlRequest, completionHandler: { (data, response, error) in
-            self.handleResponse(response)
+            self.handleResponse(response, method: urlRequest.httpMethod)
             guard let data = data else {
                 completionHandler(nil, response, error)
                 return
@@ -526,8 +546,8 @@ public class Session: NSObject {
             }
         }
         
-        return defaultURLSession.dataTask(with: request, completionHandler: { (data, response, error) in
-            self.handleResponse(response, reattemptLoginOn401Response: reattemptLoginOn401Response)
+        return httpClient.dataTask(with: request, completionHandler: { (data, response, error) in
+            self.handleResponse(response, method: request.httpMethod, reattemptLoginOn401Response: reattemptLoginOn401Response)
             cachedCompletion(data, response, error)
         })
     }
@@ -581,7 +601,7 @@ extension Session {
     
     public func data(for url: URL) async throws -> (Data, URLResponse) {
         let request = request(with: url)
-        return try await defaultURLSession.data(for: request)
+        return try await httpClient.data(for: request)
     }
 }
 
@@ -712,7 +732,17 @@ class SessionDelegate: NSObject, URLSessionDelegate, URLSessionDataDelegate {
         }
         
         if let httpResponse = response as? HTTPURLResponse {
-            
+            if httpResponse.isHTTPError {
+                ClientErrorFunnel.shared.logHTTPError(
+                    info: WMFHTTPErrorInfo(
+                        statusCode: httpResponse.statusCode,
+                        method: dataTask.originalRequest?.httpMethod,
+                        url: dataTask.originalRequest?.url?.absoluteString,
+                        source: "SessionDelegate"
+                    )
+                )
+            }
+
             var shouldCheckPersistentCache = false
             if httpResponse.statusCode == 304 {
                 shouldCheckPersistentCache = true

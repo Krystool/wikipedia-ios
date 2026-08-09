@@ -1,48 +1,57 @@
 import Foundation
 import SwiftUI
 
-struct WMFLargeButton: View {
-    
-    enum Configuration {
-        case primary
-        case secondary
-    }
-    
+public struct WMFLargeButton: View {
+
     @ObservedObject var appEnvironment = WMFAppEnvironment.current
-    
-    let configuration: Configuration
+
+    let style: WMFButtonStyleKind
     let title: String
+    let icon: WMFSFSymbolIcon?
+    let forceBackgroundColor: UIColor?
+    let forceForegroundColor: UIColor?
     let action: (() -> Void)?
-    
-    private var foregroundColor: UIColor {
-        switch configuration {
-        case .primary:
-            return WMFColor.white
-        case .secondary:
-            return appEnvironment.theme.link
-        }
+
+    public init(
+        appEnvironment: WMFAppEnvironment = WMFAppEnvironment.current,
+        style: WMFButtonStyleKind,
+        title: String,
+        icon: WMFSFSymbolIcon? = nil,
+        forceBackgroundColor: UIColor? = nil,
+        forceForegroundColor: UIColor? = nil,
+        action: (() -> Void)?
+    ) {
+        self.appEnvironment = appEnvironment
+        self.style = style
+        self.title = title
+        self.icon = icon
+        self.forceBackgroundColor = forceBackgroundColor
+        self.forceForegroundColor = forceForegroundColor
+        self.action = action
     }
-    
-    private var backgroundColor: UIColor {
-        switch configuration {
-        case .primary:
-            return appEnvironment.theme.link
-        case .secondary:
-            return .clear
-        }
-    }
-    
-    var body: some View {
-        Button(action: {
+
+    public var body: some View {
+        Button {
             action?()
-        }, label: {
-            Text(title)
-                .font(Font(WMFFont.for(.semiboldHeadline)))
-                .foregroundColor(Color(foregroundColor))
-                .frame(maxWidth: .infinity)
-                .frame(height: 46)
-                .background(Color(backgroundColor))
-                .cornerRadius(8)
-        })
+        } label: {
+            HStack(alignment: .center, spacing: 4) {
+                if let icon, let image = WMFSFSymbolIcon.for(symbol: icon, font: .semiboldSubheadline) {
+                    Image(uiImage: image)
+                        .accessibilityHidden(true)
+                }
+                Text(title)
+                    .font(Font(WMFFont.for(.semiboldHeadline)))
+            }
+        }
+        .buttonStyle(
+            CapsuleButtonStyle(
+                kind: style,
+                layout: .fill,
+                theme: appEnvironment.theme,
+                height: 46,
+                forceBackgroundColor: forceBackgroundColor,
+                forceForegroundColor: forceForegroundColor
+            )
+        )
     }
 }

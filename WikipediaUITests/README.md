@@ -1,36 +1,54 @@
-# Records app screenshots for various devices and langs:
+# Wikipedia UI Tests
+This repository uses the Robots pattern for test legibility and organization. Keep these docs aligned with the checked-in workflows, schemes, test plans, and helper APIs.
 
-- details: https://docs.fastlane.tools/actions/snapshot/
-- run the `bundle exec fastlane snapshot` command to kick off the `testRecordAppScreenshots()` screenshot taking test (when debugging `wmf_localizedString:key:` sometimes I needed to re-run this command before things behaved as expected, probably due to how `SnapshotHelper.swift` interacts with simulators & builds)
-- see `/fastlane/snapfile` to configure (langs, simulators, other parameters, etc)
-- note that for now all languages in `/fastlane/snapfile` are commented out: Jenkins passes specific languages/devices via arguments:
-  ie: `bundle exec fastlane snapshot --skip_open_summary --languages "en,de" --devices "iPhone 5s,iPhone 6"`
+## Docs
+- [Writing UI Tests](WRITING_UI_TESTS.md): start-to-finish authoring guide, including environment setup and the `ui-test-writer` skill.
+- [UI-Test GitHub Actions Mapping](GITHUB_ACTIONS.md): how workflows map to schemes, targets, test-plan configurations, triggers, artifacts, and purpose.
+- [UI-Test Architecture](ARCHITECTURE.md): suite layering, patterns, and documented exceptions.
+- [UI Test Robots](ROBOTS.md): robot-specific principles and assertion boundaries.
 
+## CI Lanes
+- `.github/workflows/run_ui_tests.yml` runs on nightly `repository_dispatch` and manual release-tag dispatch against the `WikipediaUITests` scheme and the `English (Light)` configuration from `Test Plans/UITests.xctestplan`.
+- `UITestConfiguration` defaults UI-test launches to fixture mode and forwards `-WMFTestHTTPClientProfile fixture-strict` to the app.
+- `.github/workflows/run_e2e_ui_tests.yml` runs on PRs targeting `main` and manual release-tag dispatch against the same scheme and test plan with the `English (Light, E2E)` configuration, narrowed to the test identifiers listed in `WikipediaUITests/E2ESmokeTests.txt`. That test-plan configuration passes `-WMFTestHTTPClientProfile e2e` to the UI-test process, so no fixture profile is forwarded to the app and the app uses E2E networking.
+- `.github/workflows/run_full_ui_test_plan.yml` runs on manual dispatch from a release tag, builds `WikipediaUITests` once with `build-for-testing`, and runs each checked-in `UITests.xctestplan` configuration as a separate `test-without-building` matrix job, following the existing test-plan configurations.
+- The UI-test workflows publish `.xcresult` bundles as artifacts. Use those bundles for screenshots and failure inspection.
 
-## Steps for capturing new screenshots:
- 
-- select the "WikipediaUITests" scheme
-- open `/fastlane/snapfile` and *temporarily* comment out every language and simulator but one - ie `EN` and `iPhone 5s`, for example
-- run the `bundle exec fastlane snapshot` command once
-- i think this lets `SnapshotHelper.swift` configure our build in that simulator? anyway breakpoints set in the `testRecordAppScreenshots()` test should work as expected after running this once.
-- then when you select the `iPhone 5s` simulator (in Xcode) and hit the play button on the `testRecordAppScreenshots()` test it will behave as expected (ie not fail in unexplainable ways because it's configured for non-EN)
-- once the `testRecordAppScreenshots()` test is navigating to the parts of the app you want to record pics, add `wmf_snapshot("SomeRelevantString")` where you want pics to be taken
-- after everything is working don't forget to turn off breakpoints
-- then run `bundle exec fastlane snapshot` - this will record pics for the one language and simulator you chose so you can do a quick proof and ensure all the images are being saved
-- re-open `/fastlane/snapfile` and undo the comment you added in the 2nd step above (so the full matrix of snapshots for all simulators and languages are recorded)
-- run `bundle exec fastlane snapshot` to take snapshots for ALL languages and simulators (this can take a while)
-- when debugging it can be helpful to watch the screenshots appear in this temp dir:
-<br>`~/Library/Caches/tools.fastlane/screenshots/`
-- after screenshotting has completed images are copied to:<br>`~/wikipedia-ios/WikipediaUITests/Snapshots`)
+## UI Test Robot Pattern
+- Write UI tests as intent-level scripts. Test files should describe the user journey and expected result, not raw selectors, scrolling loops, alert dismissal, or screenshot plumbing.
+- Put reusable UI automation in `WikipediaUITests/Robots`.
+- Keep the high-level robot principles in `WikipediaUITests/ROBOTS.md`.
+- Keep one robot per screen or flow. For example, `OnboardingRobot` owns welcome-screen navigation and learn-more behavior, while `PreferredLanguagesRobot` and `AllLanguagesRobot` own language-selection details.
+- Return the next robot when an action navigates to another screen. For example, skipping onboarding should return `ExploreRobot`.
+- Keep waits, accessibility identifiers, and screenshot attachment logic inside robots so timing and selector changes are centralized.
+- Keep shared app-side accessibility identifiers in `WMFComponents/Sources/WMFComponents/Utility/AccessibilityIdentifiers.swift`, including Objective-C bridge values used by legacy screens.
+- Keep launch arguments centralized in `UITestConfiguration` and `UITestLaunchArgument`. Do not set language, locale, text direction, or simulator appearance directly from individual tests.
+- Prefer stable accessibility identifiers over localized visible text. Assert localized strings only when the localization behavior itself is under test.
+- Write UI tests so they pass by default across all checked-in language configurations, in both fixture-backed and E2E runs. If a behavior is intentionally limited to a specific language, theme, or network profile, make that boundary explicit in the test.
+- Generate fixture data for every checked-in fixture-backed language configuration by default, not just English. Add narrower fixture coverage only when the requested test behavior explicitly has a narrower language surface.
+- Keep fixture-backed article-control tests locale-aware through `ArticleControlsFixture`. The fixture-backed `en`, `de`, `he`, and `vi` configurations should open the active language's Dog article through search and load bundled article resources from `WikipediaUnitTests/Fixtures/ArticleControls/<language-code>`; E2E, unsupported languages, and language configurations irrelevant to a specific assertion should skip with XCTest skip APIs.
 
-## Tips:
- 
-- setting a breakpoint in the `testRecordAppScreenshots()` test, running it, and using `expr print(XCUIApplication().debugDescription)` in the console when the breakpoint hits is handy for seeing what buttons/elements we can interact with or tap on the current screen. Find the button with the label string you are looking for (in the tree printed by `expr print(XCUIApplication().debugDescription)`) then find the key for that label's localized string and use it (this is what enables these tests to work in non-EN languages).
-- the Xcode Accessibility Inspector ("Xcode > Open Developer Tool > Accessibility Inspector") is also VERY useful for seeing what accessibility label strings are associated with text-less image buttons.
-- `sleep(n)` is also handy for pausing when debugging (this UITest target sleeps - the Wikipedia app itself doesn't)
-- uncheck "main thread checker" https://github.com/fastlane/fastlane/issues/10381#issuecomment-332183767 and https://forums.developer.apple.com/thread/86476
-- it appears to not work correctly if you try to have more than one test kick off screenshot recording. weird freezes, etc. so we just use the single test method: `testRecordAppScreenshots()` for now
-- set a breakpoint on a call to `sleep(n)` in location of interest, then `expr print(XCUIApplication().debugDescription)` to get tree of what's onscreen so you can find button string to use to search for localization key for that string so you can programmatically "push" that button
-- you can use control-option-command-U to re-run last test you ran! this is extremely handy when debugging.
-- remember that when this gets run by fastlane the app is a clean install every time (so we start from the first welcome screen) but when tweaking tests you may have left off after the welcome screens (so you can just temporarily comment out the welcome screen specific screenshotting and/or other bits when adding new screenshotting code). just be sure that when you're done adding new screenshots you test with clean install and that all the steps still execute sequentially from a fresh install - you should be able to watch it progress through the first welcome screen all the way to the end of the screenshotting code - that way you'll know when fastlane does the same thing from a clean install that everything will go smoothly.
+## Validation
+- For UI-test helper changes, first run `scripts/lint-ui-tests.sh`.
+- For compile validation, use a narrow `xcodebuild build-for-testing` or selected UI-test run while iterating.
+- For development and final UI-test verification, run the default fixture-backed `WikipediaUITests` scheme with the `UITests` test plan narrowed to `English (Light)`:
 
+```sh
+xcodebuild test \
+  -scheme WikipediaUITests \
+  -project Wikipedia.xcodeproj \
+  -testPlan UITests \
+  -only-test-configuration "English (Light)" \
+  -destination "platform=iOS Simulator,name=iPhone 16"
+```
+
+- To run the same UI tests locally as E2E tests, select the E2E test-plan configuration:
+
+```sh
+xcodebuild test \
+  -scheme WikipediaUITests \
+  -project Wikipedia.xcodeproj \
+  -testPlan UITests \
+  -only-test-configuration "English (Light, E2E)" \
+  -destination "platform=iOS Simulator,name=iPhone 16"
+```

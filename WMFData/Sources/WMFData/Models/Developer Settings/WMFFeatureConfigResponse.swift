@@ -83,7 +83,7 @@ public struct WMFFeatureConfigResponse: Codable {
                 
                 // Overwrite date check if developer settings flag is on. This allows us to test outside of active date range.
                 let developerSettingsDataController = WMFDeveloperSettingsDataController.shared
-                if developerSettingsDataController.showYiRV3 {
+                if developerSettingsDataController.showYiR2025 {
                     return true
                 }
                 
@@ -104,7 +104,18 @@ public struct WMFFeatureConfigResponse: Codable {
     }
     
     public struct IOS: Codable {
+        public let hCaptcha: HCaptcha?
         
+        public struct HCaptcha: Codable {
+            public let baseURL: String
+            public let jsSrc: String
+            public let endpoint: String
+            public let assethost: String
+            public let imghost: String
+            public let reportapi: String
+            public let sentry: Bool
+            public let apiKey: String
+        }
     }
     
     public let common: Common

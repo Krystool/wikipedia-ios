@@ -10,19 +10,17 @@ public class WMFArticleTabsHostingController<HostedView: View>: WMFComponentHost
     }()
     
     lazy var overflowButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(image: WMFSFSymbolIcon.for(symbol: .ellipsisCircle), primaryAction: nil, menu: overflowMenu)
+        let button = UIBarButtonItem(image: WMFSFSymbolIcon.for(symbol: .ellipsis), primaryAction: nil, menu: overflowMenu)
         return button
     }()
     
     private let viewModel: WMFArticleTabsViewModel
-    private let doneButtonText: String
     private let articleTabsCount: Int
     private var format: String?
     private var dataController: WMFArticleTabsDataController
 
-    public init(rootView: HostedView, viewModel: WMFArticleTabsViewModel, doneButtonText: String, articleTabsCount: Int) {
+    public init(rootView: HostedView, viewModel: WMFArticleTabsViewModel, articleTabsCount: Int) {
         self.viewModel = viewModel
-        self.doneButtonText = doneButtonText
         self.articleTabsCount = articleTabsCount
         dataController = WMFArticleTabsDataController.shared
         super.init(rootView: rootView)
@@ -31,7 +29,7 @@ public class WMFArticleTabsHostingController<HostedView: View>: WMFComponentHost
         format = viewModel.localizedStrings.navBarTitleFormat
         viewModel.updateNavigationBarTitleAction = { [weak self] numTabs in
             let newNavigationBarTitle = String.localizedStringWithFormat(self?.format ?? "", numTabs)
-            self?.configureNavigationBar(newNavigationBarTitle)
+            self?.configureNavigationBar(newNavigationBarTitle.lowercased())
         }
     }
     
@@ -45,7 +43,10 @@ public class WMFArticleTabsHostingController<HostedView: View>: WMFComponentHost
         configureNavigationBar()
         
         if dataController.shouldShowMoreDynamicTabsV2 {
-            navigationItem.rightBarButtonItems = [overflowButton, addTabButton]
+            if #available(iOS 26.0, *) {
+                overflowButton.sharesBackground = false
+            }
+            navigationItem.rightBarButtonItems = [addTabButton, overflowButton]
         } else {
             navigationItem.rightBarButtonItem = addTabButton
         }
@@ -53,6 +54,7 @@ public class WMFArticleTabsHostingController<HostedView: View>: WMFComponentHost
 
     public override func viewDidLoad() {
         super.viewDidLoad()
+        view.accessibilityIdentifier = AccessibilityIdentifiers.Tabs.view
         viewModel.loggingDelegate?.logArticleTabsOverviewImpression()
     }
 
@@ -60,7 +62,7 @@ public class WMFArticleTabsHostingController<HostedView: View>: WMFComponentHost
         let newNavigationBarTitle = String.localizedStringWithFormat(self.format ?? "", articleTabsCount)
         let titleConfig = WMFNavigationBarTitleConfig(title: title ?? newNavigationBarTitle, customView: nil, alignment: .centerCompact)
 
-        let closeConfig = WMFNavigationBarCloseButtonConfig(text: doneButtonText, target: self, action: #selector(tappedDone), alignment: .leading)
+        let closeConfig = WMFLargeCloseButtonConfig(imageType: .prominentCheck, target: self, action: #selector(tappedDone), alignment: .leading)
 
         configureNavigationBar(titleConfig: titleConfig, closeButtonConfig: closeConfig, profileButtonConfig: nil, tabsButtonConfig: nil, searchBarConfig: nil, hideNavigationBarOnScroll: false)
     }
@@ -89,35 +91,7 @@ public class WMFArticleTabsHostingController<HostedView: View>: WMFComponentHost
             }
         })
         
-        let hideArticleSuggestions = UIAction(title: viewModel.localizedStrings.hideSuggestedArticlesTitle, image: WMFSFSymbolIcon.for(symbol: .eyeSlash), handler: { [weak self] _ in
-            guard let self else { return }
-            self.dataController.userHasHiddenArticleSuggestionsTabs = true
-            self.overflowButton.menu = self.overflowMenu
-            viewModel.didToggleSuggestedArticles()
-            viewModel.refreshShouldShowSuggestionsFromDataController()
-            viewModel.loggingDelegate?.logArticleTabsOverviewTappedHideSuggestions()
-        })
-        
-        let showArticleSuggestions = UIAction(title: viewModel.localizedStrings.showSuggestedArticlesTitle, image: WMFSFSymbolIcon.for(symbol: .eye), handler: { [weak self] _ in
-            guard let self else { return }
-            self.dataController.userHasHiddenArticleSuggestionsTabs = false
-            self.overflowButton.menu = self.overflowMenu
-            viewModel.didToggleSuggestedArticles()
-            viewModel.refreshShouldShowSuggestionsFromDataController()
-            viewModel.loggingDelegate?.logArticleTabsOverviewTappedShowSuggestions()
-        })
-        
-        var children: [UIMenuElement]
-        if dataController.shouldShowMoreDynamicTabsV2 {
-            if dataController.userHasHiddenArticleSuggestionsTabs {
-                children = [showArticleSuggestions, closeAllTabs]
-            } else {
-                children = [hideArticleSuggestions, closeAllTabs]
-            }
-        } else {
-            children = [closeAllTabs]
-        }
-        let mainMenu = UIMenu(title: String(), children: children)
+        let mainMenu = UIMenu(title: String(), children: [closeAllTabs])
 
         return mainMenu
     }

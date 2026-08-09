@@ -24,9 +24,12 @@ public enum WMFColor {
     public static let blue100 = UIColor(0xEAF3FF)
     public static let blue100alpha = UIColor(0x3366CC, alpha: 0.05)
     public static let blue600alpha = UIColor(0x6699FF, alpha: 0.2)
+    public static let blue300alpha15 = UIColor(0x6699FF, alpha: 0.15)
+    public static let blue600alpha30 = UIColor(0x3366CC, alpha: 0.3)
     public static let red700 = UIColor(0xB32424)
     public static let red600 = UIColor(0xDD3333)
     public static let red100 = UIColor(0xFEE7E6)
+    public static let green700 = UIColor(0x14866D)
     public static let green600 = UIColor(0x00AF89)
     public static let green100 = UIColor(0xD5FDF4)
     public static let green100alpha = UIColor(0x00AF89, alpha: 0.05)
@@ -53,5 +56,7 @@ public enum WMFColor {
     public static let lightMatchBackground = WMFColor.yellow600.withAlphaComponent(0.3)
     public static let darkMatchBackground = UIColor(0xF7D779).withAlphaComponent(0.7)
     public static let matchReplacedBackground = UIColor(0xD0E4fC)
+    
+    public static let successGreen = UIColor(0x14866D)
 
 }

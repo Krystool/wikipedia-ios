@@ -19,8 +19,6 @@
 "about-repositories-app-source-license" = "Soorce code available unner the $1.";
 "about-repositories-app-source-license-mit" = "MIT License";
 "about-send-feedback" = "Send app feedback";
-"about-testers" = "Testers";
-"about-testers-details" = "QA testit bi $1";
 "about-title" = "Aboot";
 "about-translators" = "Translators";
 "about-translators-details" = "Translatit bi volunteers at $1";
@@ -121,5 +119,3 @@
 "wikitext-upload-save" = "Hainin...";
 // Fuzzy
 "wikitext-upload-save-anonymously-warning" = "This haes less preevacie. Yer IP address is veesible wi eedits.";
-// Fuzzy
-"wikitext-upload-save-sign-in" = "Sign in n hain";

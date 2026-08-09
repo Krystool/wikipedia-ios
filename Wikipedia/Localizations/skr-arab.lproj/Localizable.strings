@@ -57,12 +57,18 @@
 "activity-tab-very-satisfied" = "ݙاڈھا تسلی بخش";
 "activity-tab-very-unsatisfied" = "ݙاڈھا تسلی بخش";
 "activity-tab-view-editing-history" = " تبدیلی دا تاریخچہ ݙیکھو";
+"activity-tab-week-graph-label" = "ہفتہ";
 // Fuzzy
 "add-articles-to-reading-list" = "مطالعہ دی فہرست وچ $1 شامل کرو";
 "alt-text-feedback-survey-toast-title" = "فیڈبیک جمع تھی ڳئی";
 "announcements-dismiss" = "مکاؤ";
+"app-onboarding-data-privacy-policy-link" = "رازداری پالیسی";
+"app-onboarding-feed-preference-in-the-news" = "خبراں وچ";
+"app-onboarding-feed-preference-picture-of-the-day" = "اڄ دی تصویر";
+"app-onboarding-languages-primary-label" = "ابتدائی";
 "app-store-subtitle" = "مفت انسائیکلوپیڈیا";
 "appearance-settings-expand-tables" = "ٹیبل ودھاؤ";
+"appearance-settings-icon-contributor-title" = "ونگارو";
 "appearance-settings-set-automatic-table-opening" = "ٹیبل ترتیباں";
 "appearance-settings-theme-options" = "تھیم دے اختیارات";
 "article-about-title" = "ایں مضمون بارے";
@@ -75,7 +81,6 @@
 "article-read-more-title" = "ٻیا پڑھو";
 "article-reference-view-title" = "حوالہ$1";
 "article-share" = "شیئر";
-"article-tabs-did-you-know-title" = "بھلا تساں ڄاݨدے ہو";
 "article-tabs-open" = "کھولو";
 "back-button-accessibility-label" = "پچھوں";
 "button-go-back" = "واپس ڄُلو";
@@ -111,8 +116,6 @@
 "description-published-title" = "تفصیل شائع تھی ڳئی!";
 "description-welcome-descriptions-title" = "عنوان دی تفصیل";
 "description-welcome-start-editing-button" = "لکھݨ شروع کرو";
-// Fuzzy
-"did-you-know" = "بھلا تساں ڄاݨدے ہو";
 "diff-compare-header-from-info-heading" = "پچھلی تبدیلی";
 // Fuzzy
 "diff-compare-header-to-info-heading" = "کوں";
@@ -205,9 +208,10 @@
 "forgot-password-button-title" = "ولدا ٹھیک کرو";
 "forgot-password-title" = "پاس ورڈ ولدا ٹھیک کرو";
 "forgot-password-username-or-email-title" = "یا";
-"history-clear-all" = "صاف";
 "history-clear-delete-all" = "جیا سبھ مٹاؤ";
 "history-title" = "تاریخچہ";
+"home-feed-settings-community-section-title" = "برادری";
+"home-feed-settings-for-you-section-title" = "تہاݙے کیتے";
 "home-more-like-footer" = "$1 وانگوں ٻئے";
 "home-themes-action-title" = "ترجیحاں منیج کرو";
 "home-title" = "پھرولو";
@@ -265,12 +269,12 @@
 "more-languages-tooltip-title" = "زباناں شامل کرو";
 "more-menu" = "ٻئے";
 "navbar-title-mode-edit-wikitext-preview" = "پیشگی ݙکھالا";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 فٹ";
 "nearby-distance-label-km" = "$1 کلو میٹر";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 میٹر";
 "nearby-distance-label-miles" = "$1 میل";
-"new-article-tab-from-wikipedia-default" = "وکیپیڈیا کنوں";
-"new-article-tab-settings-did-you-know" = "بھلا تساں ڄاݨدے ہو؟";
 "new-password-title" = "پاس ورڈ درج کرو";
 "new-tab" = "نویں ٹیب";
 "next-action-title" = "اڳلا";
@@ -386,9 +390,6 @@
 "relative-date-minutes-ago-abbreviated" = "$1m پہلے";
 "relative-date-seconds-abbreviated" = "$1s";
 "relative-date-seconds-ago-abbreviated" = "$1s پہلے";
-"replace-infolabel-method-replace" = "بدل گھنو";
-"replace-infolabel-method-replace-all" = "سارے بدل گھنو";
-"replace-textfield-accessibility" = "بدل گھنو";
 "saved-all-articles-title" = "سارے مضمون";
 "saved-search-default-text" = "محفوظ تھئے مضمون ڳولو";
 "saved-title" = "محفوظ";
@@ -404,19 +405,19 @@
 "settings-appearance" = "پڑھݨ ترجیحاں";
 "settings-clear-cache-cancel" = "منسوخ";
 "settings-clear-cache-ok" = "کیشی صاف کرو";
+"settings-community-feed-title" = "برادری";
 "settings-donate" = "عطیہ ݙیوو";
 "settings-help-and-feedback" = "مدد تے ردعمل";
 "settings-my-languages" = "میݙیاں زباناں";
 // Fuzzy
 "settings-notifications" = "اطلاع نامے";
 "settings-notifications-echo-failure-try-again" = "ولدا کوشش کرو";
-"settings-notifications-system-turn-on" = "اطلاع نامے چالو کرو";
 "settings-off" = "بند";
 "settings-on" = "آن";
 "settings-primary-language" = "ابتدائی";
-"settings-storage-and-syncing-erase-saved-articles-alert-title" = "محفوظ تھئے سارے مضمون مٹا ݙیووں؟";
-"settings-storage-and-syncing-erase-saved-articles-button-title" = "مٹاؤ";
-"settings-storage-and-syncing-erase-saved-articles-title" = "محفوظ تھئے مضمون مٹاؤ";
+"settings-storage-and-syncing-disable-sync-alert-no" = "کو";
+"settings-storage-and-syncing-disable-sync-alert-yes" = "جیا";
+"settings-temp-account-end-session-confirm" = "لاگ آؤٹ";
 "settings-title" = "ترتیباں";
 "share-article-name-on-wikipedia" = "وکیپیڈیا تے \"$1\":";
 "share-menu-item" = "شیئر۔۔۔";
@@ -506,15 +507,15 @@
 "welcome-intro-free-encyclopedia-more" = "وکی پیڈیا بارے ٻیا سکھو";
 "welcome-intro-free-encyclopedia-more-about" = "وکیپیڈیا دا تعارف";
 "welcome-languages-add-button" = "ٻئی زبان رلاؤ";
+"which-came-first-archive-nav-title" = "آرکائیو";
 "wikitext-preview-link-external-preview-title" = "ٻاہرلا لنک";
 "wikitext-preview-link-not-found-preview-title" = "کوئی اندرلا لنک کائنی لبھا";
 "wikitext-preview-save-changes-title" = "تبدیلیاں محفوظ کرو";
 "wikitext-upload-save" = "شائع تھیندا پئے۔۔۔";
-"wikitext-upload-save-sign-in" = "لاگ ان تھیوو";
 "wikitext-upload-save-terms-name" = "ورتݨ شرطاں";
 "year-in-review-donate" = "عطیہ";
 // Fuzzy
-"year-in-review-personalized-edit-views-subtitle-format" = "دنیا بھر دے پڑھݨ ہار تہاݙی ہتھ بھرائی کوں سُلاہیندن۔  پچھلے 2 مہیناں وچ، تُہاݙے وٹا پھیر کردہ مضامین کوں $1 کل ملاحظات ملے ہِن۔  تہاݙے سویں ایڈیٹرز دا شکریہ، ویکیپیڈیا دنیا کیتے ہک پکا بہتر کرݨ آالا، حقائق تے مبنی، اَتے قابلِ اعتماد علمی وسیلہ ہے۔";
+"year-in-review-personalized-edit-views-subtitle-format-updated" = "دنیا بھر دے پڑھݨ ہار تہاݙی ہتھ بھرائی کوں سُلاہیندن۔  پچھلے 2 مہیناں وچ، تُہاݙے وٹا پھیر کردہ مضامین کوں $1 کل ملاحظات ملے ہِن۔  تہاݙے سویں ایڈیٹرز دا شکریہ، ویکیپیڈیا دنیا کیتے ہک پکا بہتر کرݨ آالا، حقائق تے مبنی، اَتے قابلِ اعتماد علمی وسیلہ ہے۔";
 "year-in-review-survey-neutral" = "غیر جانبدار";
 "year-in-review-survey-satisfied" = "مطمئن";
 "year-in-review-survey-unsatisfied" = "غیر مطمئن";

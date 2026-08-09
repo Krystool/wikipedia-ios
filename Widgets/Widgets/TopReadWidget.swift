@@ -28,6 +28,10 @@ final class TopReadData {
 
     static let shared = TopReadData()
 
+    /// Row thumbnails render as ~70pt squares; 240px covers 3x displays and stays
+    /// under WidgetKit's archival size cap, which the raw API thumbs can exceed.
+    private static let rowImageTargetSize = CGSize(width: 240, height: 240)
+
     var placeholder: TopReadEntry {
         return TopReadEntry(isPlaceholder: true, date: Date())
     }
@@ -59,10 +63,10 @@ final class TopReadData {
                     let title = rankedElement.displayTitle.removingHTML
                     let description = rankedElement.description?.removingHTML ?? ""
                     let url = URL(string: rankedElement.contentURL.desktop.page)
-                    let viewCounts: [NSNumber] = rankedElement.viewHistory.compactMap { NSNumber(value: $0.views) }
+                    let viewCounts: [NSNumber] = rankedElement.viewHistory?.compactMap { NSNumber(value: $0.views) } ?? [NSNumber(value: rankedElement.views)]
                     var image: UIImage?
                     if let imageData = rankedElement.thumbnailImageSource?.data {
-                        image = UIImage(data: imageData)
+                        image = UIImage.downsampled(from: imageData, targetSize: Self.rowImageTargetSize)
                     }
 
                     let displayElement = TopReadEntry.RankedElement(title: title, description: description, articleURL: url, image: image, viewCounts: viewCounts)
@@ -163,15 +167,15 @@ struct TopReadView: View {
             switch family {
             case .systemMedium:
                 rowBasedWidget(.systemMedium)
-                    .widgetURL(entry?.groupURL)
+                    .widgetURL(wmf_urlWithWidgetSource(entry?.groupURL, name: "top_read"))
             case .systemLarge:
                 rowBasedWidget(.systemLarge)
-                    .widgetURL(entry?.groupURL)
+                    .widgetURL(wmf_urlWithWidgetSource(entry?.groupURL, name: "top_read"))
             default:
                 smallWidget
                     .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
                     .overlay(TopReadOverlayView(rankedElement: entry?.rankedElements.first))
-                    .widgetURL(entry?.rankedElements.first?.articleURL)
+                    .widgetURL(wmf_urlWithWidgetSource(entry?.rankedElements.first?.articleURL, name: "top_read"))
             }
         }
         .clearWidgetContainerBackground()
@@ -202,7 +206,7 @@ struct TopReadView: View {
                 .fontWeight(.bold)
             ForEach(entry?.rankedElements.indices.prefix(rowCount) ?? 0..<0, id: \.self) { elementIndex in
                 if let articleURL = entry?.rankedElements[elementIndex].articleURL {
-                    Link(destination: articleURL, label: {
+                    Link(destination: wmf_urlWithWidgetSource(articleURL, name: "top_read"), label: {
                         elementRow(elementIndex, rowCount: rowCount, showSparkline: showSparkline)
                     })
                 } else {

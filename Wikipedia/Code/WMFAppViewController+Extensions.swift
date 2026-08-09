@@ -4,15 +4,24 @@ import SwiftUI
 import WMFComponents
 import WMFData
 import CocoaLumberjackSwift
+import WMFNativeLocalizations
+import TipKit
+import WMFTestKitchen
+
+private let wmfHideTipsForTesting = "WMFHideTipsForTesting"
 
 extension Notification.Name {
     static let showErrorBanner = Notification.Name("WMFShowErrorBanner")
     static let showErrorBannerNSErrorKey = "nserror"
+    static let articleViewControllerDidDisappear = Notification.Name("WMFArticleViewControllerDidDisappear")
+    static let dismissReadingListToast = Notification.Name("WMFDismissReadingListToast")
 }
 
 @objc extension NSNotification {
     public static let showErrorBanner = Notification.Name.showErrorBanner
     static let showErrorBannerNSErrorKey = Notification.Name.showErrorBannerNSErrorKey
+    public static let articleViewControllerDidDisappear = Notification.Name.articleViewControllerDidDisappear
+    public static let dismissReadingListToast = Notification.Name.dismissReadingListToast
 }
 
 @objc public enum AppTab: Int {
@@ -24,80 +33,121 @@ extension Notification.Name {
 }
 
 extension WMFAppViewController {
-    
+
+    @objc func shouldOpenAppOnSearchTab() -> Bool {
+        let userDefaultsStore = WMFDataEnvironment.current.userDefaultsStore
+        return (try? userDefaultsStore?.load(key: WMFUserDefaultsKey.openAppOnSearchTab.rawValue)) ?? false
+    }
+
     @objc internal func processLinkUserActivity(_ userActivity: NSUserActivity) -> Bool {
-        
+
         guard let linkURL = userActivity.wmf_linkURL() else {
             return false
         }
-        
-        guard let navigationController = self.currentNavigationController else {
+
+        guard let navigationController = self.currentTabNavigationController else {
             return false
         }
-        
-        let linkCoordinator = LinkCoordinator(navigationController: navigationController, url: linkURL, dataStore: dataStore, theme: theme, articleSource: .external_link, tabConfig: .appendArticleAndAssignNewTabAndSetToCurrent)
+
+        // Use the article source from userInfo if provided (e.g. widget deep links inject .widget),
+        // otherwise default to external_link for generic deep links from browsers etc.
+        let articleSource: ArticleSource
+        if let sourceInt = userActivity.userInfo?[ArticleSourceUserInfoKeys.articleSource] as? Int,
+           let source = ArticleSource(rawValue: sourceInt) {
+            articleSource = source
+        } else {
+            articleSource = .external_link
+        }
+
+        let linkCoordinator = LinkCoordinator(navigationController: navigationController, url: linkURL, dataStore: dataStore, theme: theme, articleSource: articleSource, tabConfig: .appendArticleAndAssignNewTabAndSetToCurrent)
         return linkCoordinator.start()
     }
 
     // MARK: - Language Variant Migration Alerts
-    
+
     @objc internal func presentLanguageVariantAlerts(completion: @escaping () -> Void) {
-        
+
         guard shouldPresentLanguageVariantAlerts else {
             completion()
             return
         }
-        
+
         let savedLibraryVersion = UserDefaults.standard.integer(forKey: WMFLanguageVariantAlertsLibraryVersion)
         guard savedLibraryVersion < MWKDataStore.currentLibraryVersion else {
             completion()
             return
         }
-        
+
         let languageCodesNeedingAlerts = self.dataStore.languageCodesNeedingVariantAlerts(since: savedLibraryVersion)
         guard let firstCode = languageCodesNeedingAlerts.first else {
             completion()
             return
         }
-        
+
         self.presentVariantAlert(for: firstCode, remainingCodes: Array(languageCodesNeedingAlerts.dropFirst()), completion: completion)
-            
+
         UserDefaults.standard.set(MWKDataStore.currentLibraryVersion, forKey: WMFLanguageVariantAlertsLibraryVersion)
     }
-    
-    private func presentVariantAlert(for languageCode: String, remainingCodes: [String], completion: @escaping () -> Void) {
-        
-        let primaryButtonTapHandler: ScrollableEducationPanelButtonTapHandler
-        let secondaryButtonTapHandler: ScrollableEducationPanelButtonTapHandler?
-                
-        // If there are remaining codes
-        if let nextCode = remainingCodes.first {
-            
-            // If more to show, primary button shows next variant alert
-            primaryButtonTapHandler = { _, _ in
-                self.dismiss(animated: true) {
-                    self.presentVariantAlert(for: nextCode, remainingCodes: Array(remainingCodes.dropFirst()), completion: completion)
-                }
-            }
-            // And no secondary button
-            secondaryButtonTapHandler = nil
-            
-        } else {
-            // If no more to show, primary button navigates to languge settings
-            primaryButtonTapHandler = { _, _ in
-                self.displayPreferredLanguageSettings(completion: completion)
-            }
 
-            // And secondary button dismisses
-            secondaryButtonTapHandler = { _, _ in
-                self.dismiss(animated: true, completion: completion)
-            }
+    private func presentVariantAlert(for languageCode: String, remainingCodes: [String], completion: @escaping () -> Void) {
+
+        let title = alertTitleForLanguageVariantCode(languageCode)
+        let message = alertBodyForLanguageVariantCode(languageCode)
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+
+        // If there are remaining codes, primary button shows the next variant alert
+        if let nextCode = remainingCodes.first {
+            alert.addAction(UIAlertAction(title: CommonStrings.gotItButtonTitle, style: .default) { [weak self] _ in
+                self?.presentVariantAlert(for: nextCode, remainingCodes: Array(remainingCodes.dropFirst()), completion: completion)
+            })
+        } else {
+            // No more to show: primary button navigates to language settings, secondary dismisses
+            alert.addAction(UIAlertAction(title: CommonStrings.variantsAlertPreferencesButton, style: .default) { [weak self] _ in
+                self?.displayPreferredLanguageSettings(completion: completion)
+            })
+            alert.addAction(UIAlertAction(title: CommonStrings.noThanksTitle, style: .cancel) { _ in
+                completion()
+            })
         }
-                
-        let alert = LanguageVariantEducationalPanelViewController(primaryButtonTapHandler: primaryButtonTapHandler, secondaryButtonTapHandler: secondaryButtonTapHandler, dismissHandler: nil, theme: self.theme, languageCode: languageCode)
         self.present(alert, animated: true, completion: nil)
     }
-    
+
+    private func alertTitleForLanguageVariantCode(_ languageCode: String) -> String {
+        switch languageCode {
+        case "crh": return CommonStrings.crimeanTatarVariantsAlertTitle
+        case "gan": return CommonStrings.ganVariantsAlertTitle
+        case "iu": return CommonStrings.inuktitutVariantsAlertTitle
+        case "kk": return CommonStrings.kazakhVariantsAlertTitle
+        case "ku": return CommonStrings.kurdishVariantsAlertTitle
+        case "sr": return CommonStrings.serbianVariantsAlertTitle
+        case "tg": return CommonStrings.tajikVariantsAlertTitle
+        case "uz": return CommonStrings.uzbekVariantsAlertTitle
+        case "zh": return CommonStrings.chineseVariantsAlertTitle
+        case "shi": return CommonStrings.tachelhitVariantsAlertTitle
+        default:
+            assertionFailure("No language variant alert title for language code '\(languageCode)'")
+            return ""
+        }
+    }
+
+    private func alertBodyForLanguageVariantCode(_ languageCode: String) -> String {
+        switch languageCode {
+        case "crh": return CommonStrings.crimeanTatarVariantsAlertBody
+        case "gan": return CommonStrings.ganVariantsAlertBody
+        case "iu": return CommonStrings.inuktitutVariantsAlertBody
+        case "kk": return CommonStrings.kazakhVariantsAlertBody
+        case "ku": return CommonStrings.kurdishVariantsAlertBody
+        case "sr": return CommonStrings.serbianVariantsAlertBody
+        case "tg": return CommonStrings.tajikVariantsAlertBody
+        case "uz": return CommonStrings.uzbekVariantsAlertBody
+        case "zh": return CommonStrings.chineseVariantsAlertBody
+        case "shi": return CommonStrings.tachelhitVariantsAlertBody
+        default:
+            assertionFailure("No language variant alert body for language code '\(languageCode)'")
+            return ""
+        }
+    }
+
     // Don't present over modals or navigation stacks
     // The user is deep linking in these states and we don't want to interrupt them
     private var shouldPresentLanguageVariantAlerts: Bool {
@@ -118,46 +168,6 @@ extension WMFAppViewController {
         let navVC = WMFComponentNavigationController(rootViewController: languagesVC, modalPresentationStyle: .overFullScreen)
         present(navVC, animated: true, completion: nil)
     }
-    
-    @objc func assignAndLogActivityTabExperiment() {
-        guard let dataController = WMFActivityTabExperimentsDataController.shared,
-              let primaryLanguage = dataStore.languageLinkController.appLanguage,
-              let project = WikimediaProject(siteURL: primaryLanguage.siteURL),
-                let wmfProject = project.wmfProject else {
-            return
-        }
-
-        guard dataController.shouldAssignToBucket() else {
-            return
-        }
-        
-        do {
-            let assignment = try dataController.assignActivityTabExperiment(project: wmfProject)
-            EditInteractionFunnel.shared.logActivityTabGroupAssignment(groupAssignment: assignment.rawValue, project: project)
-        } catch {
-            DDLogError("Error fetching activity tab experiment: \(error)")
-        }
-    }
-
-    @objc func getAssignmentForActivityTabExperiment() -> Int {
-        guard let dataController = WMFActivityTabExperimentsDataController.shared,
-              let primaryLanguage = dataStore.languageLinkController.appLanguage,
-              let project = WikimediaProject(siteURL: primaryLanguage.siteURL),
-              let wmfProject = project.wmfProject else {
-            return 0
-        }
-        var assignment = 0 // start as control
-
-        do {
-            let currentAssigment = try dataController.getActivityTabExperimentAssignment(project: wmfProject)
-            assignment = currentAssigment.rawValue
-        } catch {
-            DDLogError("Error reading activity tab assignment: \(error)")
-        }
-
-        return assignment
-    }
-
 }
 
 // MARK: - Notifications
@@ -168,7 +178,7 @@ extension WMFAppViewController: NotificationsCenterPresentationDelegate {
     public func userDidTapNotificationsCenter(from viewController: UIViewController? = nil) {
         let viewModel = NotificationsCenterViewModel(notificationsController: dataStore.notificationsController, remoteNotificationsController: dataStore.remoteNotificationsController, languageLinkController: self.dataStore.languageLinkController)
         let notificationsCenterViewController = NotificationsCenterViewController(theme: theme, viewModel: viewModel)
-        
+
         currentTabNavigationController?.pushViewController(notificationsCenterViewController, animated: true)
     }
 }
@@ -178,7 +188,7 @@ extension WMFAppViewController {
         guard let topMostViewController = self.topMostViewController else {
             return
         }
-        
+
         // If already displaying Notifications Center (or some part of it), exit early
         if let notificationsCenterFlowViewController = topMostViewController.notificationsCenterFlowViewController {
             notificationsCenterFlowViewController.tappedPushNotification()
@@ -188,7 +198,7 @@ extension WMFAppViewController {
         let viewModel = NotificationsCenterViewModel(notificationsController: dataStore.notificationsController, remoteNotificationsController: dataStore.remoteNotificationsController, languageLinkController: dataStore.languageLinkController)
 
         let notificationsCenterViewController = NotificationsCenterViewController(theme: theme, viewModel: viewModel)
-        
+
         let dismissAndPushBlock = { [weak self] in
             self?.dismissPresentedViewControllers()
             self?.currentTabNavigationController?.pushViewController(notificationsCenterViewController, animated: true)
@@ -199,10 +209,10 @@ extension WMFAppViewController {
             dismissAndPushBlock()
             return
         }
-        
+
         presentEditorAlert(on: topMostViewController, confirmationBlock: dismissAndPushBlock)
     }
-    
+
     var editingFlowViewControllerInHierarchy: EditingFlowViewController? {
         var currentController: UIViewController? = currentTabNavigationController
 
@@ -216,23 +226,23 @@ extension WMFAppViewController {
             } else if let editingFlowViewController = presentedViewController as? EditingFlowViewController {
                 return editingFlowViewController
             }
-            
+
             currentController = presentedViewController
         }
 
         return nil
     }
-    
+
     @objc var currentTabNavigationController: WMFComponentNavigationController? {
         if let componentNavVC = selectedViewController as? WMFComponentNavigationController {
             return componentNavVC
         }
-        
+
         return nil
     }
-    
+
     private var topMostViewController: UIViewController? {
-            
+
         var topViewController: UIViewController = currentTabNavigationController ?? self
 
         while let presentedViewController = topViewController.presentedViewController {
@@ -241,42 +251,49 @@ extension WMFAppViewController {
 
         return topViewController
     }
-    
+
     private func presentEditorAlert(on viewController: UIViewController, confirmationBlock: @escaping () -> Void) {
-        
+
         let title = CommonStrings.editorExitConfirmationTitle
         let message = CommonStrings.editorExitConfirmationBody
-        
+
         let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
         let discardAction = UIAlertAction(title: CommonStrings.discardEditsActionTitle, style: .destructive) { _ in
             confirmationBlock()
         }
         let cancelAction = UIAlertAction(title: CommonStrings.cancelActionTitle, style: .cancel)
-        
+
         alertController.addAction(discardAction)
         alertController.addAction(cancelAction)
-        
+
         viewController.present(alertController, animated: true, completion: nil)
     }
     
-    @objc func showRandomArticleFromShortcut(siteURL: URL?, animated: Bool) {
+    @objc func showRandomArticleFromShortcut(siteURL: URL?, animated: Bool, userInfo: [AnyHashable: Any]? = nil) {
         guard let navVC = currentTabNavigationController else { return }
-        let coordinator = RandomArticleCoordinator(navigationController: navVC, articleURL: nil, siteURL: siteURL, dataStore: dataStore, theme: theme, source: .undefined, animated: animated)
+        let articleSource: ArticleSource
+        if let sourceInt = userInfo?[ArticleSourceUserInfoKeys.articleSource] as? Int,
+           let source = ArticleSource(rawValue: sourceInt) {
+            articleSource = source
+        } else {
+            articleSource = .undefined
+        }
+        let coordinator = RandomArticleCoordinator(navigationController: navVC, articleURL: nil, siteURL: siteURL, dataStore: dataStore, theme: theme, source: articleSource, animated: animated)
         coordinator.start()
     }
 
 }
 
 fileprivate extension UIViewController {
-    
+
     /// Returns self or embedded view controller (if self is a UINavigationController) if conforming to NotificationsCenterFlowViewController
     /// Does not consider presenting view controllers
     var notificationsCenterFlowViewController: NotificationsCenterFlowViewController? {
-        
+
         if let viewController = self as? NotificationsCenterFlowViewController {
             return viewController
         }
-        
+
         if let navigationController = self as? UINavigationController,
            let viewController = navigationController.viewControllers.last as? NotificationsCenterFlowViewController {
             return viewController
@@ -300,7 +317,7 @@ extension EditingFlowViewController {
 
 /// View Controllers that are a part of the Notifications Center flow
 protocol NotificationsCenterFlowViewController where Self: UIViewController {
-    
+
     // hook called after the user taps a push notification while in the foregound.
     // use if needed to tweak the view hierarchy to display the Notifications Center
     func tappedPushNotification()
@@ -329,7 +346,7 @@ extension WMFAppViewController: WMFWatchlistDelegate {
         } else {
             diffURL = siteURL.wmf_URL(withPath: "/wiki/Special:MobileDiff/\(oldRevisionID)...\(revisionID)")
         }
-        
+
         let userInfo: [AnyHashable : Any] = [RoutingUserInfoKeys.source: RoutingUserInfoSourceValue.watchlist.rawValue]
 
         navigate(to: diffURL, userInfo: userInfo)
@@ -356,23 +373,20 @@ extension WMFAppViewController: WMFWatchlistDelegate {
                     case .success:
                         let successfulThanks = WMFLocalizedString("watchlist-thanks-success", value: "Your ‘Thanks’ was sent to %@", comment: "Message displayed in a toast on successful thanking of user in Watchlist view. %@ is replaced with the user being thanked.")
                         let successMessage = String.localizedStringWithFormat(successfulThanks, username)
-                        WMFAlertManager.sharedInstance.showBottomAlertWithMessage(successMessage, subtitle: nil, image: UIImage(named: "watchlist-thanks-checkmark"), type: .normal, customTypeName: nil, dismissPreviousAlerts: true)
+                        WMFToastManager.sharedInstance.showRichToast(successMessage, subtitle: nil, image: UIImage(named: "watchlist-thanks-checkmark"), dismissPreviousToasts: true)
                     case .failure(let failure):
-                        WMFAlertManager.sharedInstance.showBottomAlertWithMessage(failure.localizedDescription, subtitle: nil, image: nil, type: .error, customTypeName: nil, dismissPreviousAlerts: true)
+                        WMFToastManager.sharedInstance.showRichToast(failure.localizedDescription, subtitle: nil, image: nil, dismissPreviousToasts: true)
                     }
                 })
             }
 
             if !UserDefaults.standard.wmf_didShowThankRevisionAuthorEducationPanel() {
-                topMostViewController?.wmf_showThankRevisionAuthorEducationPanel(theme: theme, sendThanksHandler: { [weak self] _, _ in
+                topMostViewController?.wmf_showThankRevisionAuthorEducationPanel(theme: theme, sendThanksHandler: {
                     WatchlistFunnel.shared.logThanksTapSend(project: wikimediaProject)
                     UserDefaults.standard.wmf_setDidShowThankRevisionAuthorEducationPanel(true)
-                    self?.topMostViewController?.dismiss(animated: true, completion: {
-                        performThanks()
-                    })
-                }, cancelHandler: { [weak self] _, _ in
+                    performThanks()
+                }, cancelHandler: {
                     WatchlistFunnel.shared.logThanksTapCancel(project: wikimediaProject)
-                    self?.topMostViewController?.dismiss(animated: true)
                 })
             } else {
                 performThanks()
@@ -381,7 +395,7 @@ extension WMFAppViewController: WMFWatchlistDelegate {
             watchlistUserDidTapDiff(project: project, title: title, revisionID: revId, oldRevisionID: oldRevId)
         }
     }
-    
+
     public func watchlistEmptyViewUserDidTapSearch() {
         NSUserActivity.wmf_navigate(to: NSUserActivity.wmf_searchView())
     }
@@ -434,16 +448,16 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
     public func logWatchlistDidLoad(itemCount: Int) {
         WatchlistFunnel.shared.logWatchlistLoaded(itemCount: itemCount)
     }
-    
+
     public func logWatchlistUserDidTapNavBarFilterButton() {
         WatchlistFunnel.shared.logOpenFilterSettings()
     }
-    
+
     public func logWatchlistUserDidSaveFilterSettings(filterSettings: WMFWatchlistFilterSettings, onProjects: [WMFProject]) {
-        
+
         // Projects
         let commonsAndWikidataProjects: WatchlistFunnel.FilterEnabledList.Projects?
-        
+
         if onProjects.contains(.commons) && onProjects.contains(.wikidata) {
             commonsAndWikidataProjects = .both
         } else if onProjects.contains(.commons) && onProjects.contains(.commons) {
@@ -453,7 +467,7 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
         } else {
             commonsAndWikidataProjects = nil
         }
-        
+
         // Wikis
         let wikipediaProjects = onProjects.map { WikimediaProject(wmfProject: $0) }.filter {
             switch $0 {
@@ -461,9 +475,9 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
             default: return false
             }
         }
-        
+
         let wikiIdentifiers = wikipediaProjects.map { $0.notificationsApiWikiIdentifier }
-        
+
         // Latest
         let latest: WatchlistFunnel.FilterEnabledList.Latest
         switch filterSettings.latestRevisions {
@@ -472,7 +486,7 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
         case .latestRevision:
             latest = .latest
         }
-        
+
         // Activity
         let activity: WatchlistFunnel.FilterEnabledList.Activity
         switch filterSettings.activity {
@@ -483,7 +497,7 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
         case .unseenChanges:
             activity = .unseen
         }
-        
+
         // Automated
         let automated: WatchlistFunnel.FilterEnabledList.Automated
         switch filterSettings.automatedContributions {
@@ -494,7 +508,7 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
         case .human:
             automated = .nonBot
         }
-        
+
         // Significance
         let significance: WatchlistFunnel.FilterEnabledList.Significance
         switch filterSettings.significance {
@@ -505,7 +519,7 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
         case .nonMinorEdits:
             significance = .nonMinor
         }
-        
+
         // User Registration
         let userRegistration: WatchlistFunnel.FilterEnabledList.UserRegistration
         switch filterSettings.userRegistration {
@@ -516,7 +530,7 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
         case .unregistered:
             userRegistration = .unregistered
         }
-        
+
         // Type Change
         var onTypeChanges: [WatchlistFunnel.FilterEnabledList.TypeChange] = []
         for changeType in WMFWatchlistFilterSettings.ChangeType.allCases {
@@ -530,35 +544,35 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
                 }
             }
         }
-        
+
         let filterEnabledList = WatchlistFunnel.FilterEnabledList(projects: commonsAndWikidataProjects, wikis: wikiIdentifiers, latest: latest, activity: activity, automated: automated, significance: significance, userRegistration: userRegistration, typeChange: onTypeChanges)
-        
+
         WatchlistFunnel.shared.logSaveFilterSettings(filterEnabledList: filterEnabledList)
     }
-    
+
     public func logWatchlistEmptyViewDidShow(type: WMFEmptyViewStateType) {
         switch type {
         case .noItems: WatchlistFunnel.shared.logWatchlistSawEmptyStateNoFilters()
         case .filter: WatchlistFunnel.shared.logWatchlistSawEmptyStateWithFilters()
         }
     }
-    
+
     public func logWatchlistEmptyViewUserDidTapSearch() {
         WatchlistFunnel.shared.logWatchlistEmptyStateTapSearch()
     }
-    
+
     public func logWatchlistEmptyViewUserDidTapModifyFilters() {
         WatchlistFunnel.shared.logWatchlistEmptyStateTapModifyFilters()
     }
-    
+
     public func logWatchlistUserDidTapUserButton(project: WMFData.WMFProject) {
-        
+
         let wikimediaProject = WikimediaProject(wmfProject: project)
         WatchlistFunnel.shared.logTapUserMenu(project: wikimediaProject)
     }
-    
+
     public func logWatchlistUserDidTapUserButtonAction(project: WMFData.WMFProject, action: WMFComponents.WMFWatchlistUserButtonAction) {
-        
+
         let wikimediaProject = WikimediaProject(wmfProject: project)
 
         switch action {
@@ -574,17 +588,17 @@ extension WMFAppViewController: WMFWatchlistLoggingDelegate {
             break
         }
     }
-    
-    
+
+
 }
 
 // MARK: Importing Reading Lists - CreateReadingListDelegate
 
 extension WMFAppViewController: CreateReadingListDelegate {
     func createReadingListViewController(_ createReadingListViewController: CreateReadingListViewController, didCreateReadingListWith name: String, description: String?, articles: [WMFArticle]) {
-        
+
         guard !articles.isEmpty else {
-            WMFAlertManager.sharedInstance.showErrorAlert(ImportReadingListError.missingArticles, sticky: true, dismissPreviousAlerts: true, tapCallBack: nil)
+            WMFToastManager.sharedInstance.showErrorAlert(ImportReadingListError.missingArticles, sticky: true, dismissPreviousToasts: true, tapCallBack: nil)
             return
         }
 
@@ -599,12 +613,23 @@ extension WMFAppViewController: CreateReadingListDelegate {
             case let readingListError as ReadingListError where readingListError == .listExistsWithTheSameName:
                 createReadingListViewController.handleReadingListNameError(readingListError)
             default:
-                WMFAlertManager.sharedInstance.showErrorAlert(error, sticky: true, dismissPreviousAlerts: true, tapCallBack: nil)
+                WMFToastManager.sharedInstance.showErrorAlert(error, sticky: true, dismissPreviousToasts: true, tapCallBack: nil)
                 createReadingListViewController.createReadingListButton.isEnabled = true
             }
         }
     }
-    
+
+    @objc func setupTips() {
+        do {
+            try Tips.configure()
+            if UserDefaults.standard.bool(forKey: wmfHideTipsForTesting) {
+                Tips.hideAllTipsForTesting()
+            }
+        } catch {
+            DDLogError("Error initializing TipKit: \(error.localizedDescription)")
+        }
+    }
+
     @objc func setWMFAppEnvironmentTheme(theme: Theme, traitCollection: UITraitCollection) {
         let wmfTheme: WMFTheme
         switch theme.name {
@@ -626,52 +651,193 @@ extension WMFAppViewController: CreateReadingListDelegate {
 // MARK: WMFData setup
 
 extension WMFAppViewController {
-    
+
     @objc func setupWMFDataCoreDataStore() {
         WMFDataEnvironment.current.appContainerURL = FileManager.default.wmf_containerURL()
-        
-        Task {
+
+        migrateAutoSignTalkPageDiscussions()
+        migrateShowLanguageBar()
+        migrateOpenAppOnSearchTab()
+        migrateIsSubscribedToEchoNotifications()
+
+        Task(priority: .userInitiated) {
             do {
                 WMFDataEnvironment.current.coreDataStore = try await WMFCoreDataStore()
+                await self.migrateSavedArticleInfoWithBackgroundTask()
+                await self.recoverReadingChallenge2026Completion()
             } catch let error {
                 DDLogError("Error setting up WMFCoreDataStore: \(error)")
             }
         }
     }
-    
+
+    /// Determines whether the user completed the (since removed) 2026 Reading Challenge and saves it
+    /// to user defaults. No-ops after it succeeds once. Retries on the next launch if it throws,
+    /// which is why the error is logged rather than surfaced.
+    private func recoverReadingChallenge2026Completion() async {
+        do {
+            try await WMFReadingChallengeCompletionDataController.shared.recoverCompletionIfNeeded()
+        } catch let error {
+            DDLogError("Error recovering 2026 Reading Challenge completion: \(error)")
+        }
+    }
+
+    private func migrateSavedArticleInfoWithBackgroundTask() async {
+
+        var bgTask: UIBackgroundTaskIdentifier = .invalid
+        bgTask = UIApplication.shared.beginBackgroundTask(withName: "WMFDataMigration") {
+            if bgTask != .invalid {
+                UIApplication.shared.endBackgroundTask(bgTask)
+                bgTask = .invalid
+            }
+        }
+
+        await WMFArticleSavedStateMigrationManager.shared.migrateAllIfNeeded()
+
+        if bgTask != .invalid {
+            UIApplication.shared.endBackgroundTask(bgTask)
+            bgTask = .invalid
+        }
+    }
+
+    private func migrateAutoSignTalkPageDiscussions() {
+        let settingsDataController = WMFSettingsDataController.shared
+        guard !settingsDataController.didMigrateAutoSignTalkPageDiscussions() else {
+            return
+        }
+
+        if settingsDataController.hasStoredAutoSignTalkPageDiscussions() {
+            settingsDataController.setDidMigrateAutoSignTalkPageDiscussions(true)
+            return
+        }
+        let legacyKey = "WMFAutoSignTalkPageDiscussions"
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        let persistedValue = UserDefaults.standard.persistentDomain(forName: bundleID)?[legacyKey] as? Bool ?? true
+        settingsDataController.setAutoSignTalkPageDiscussions(persistedValue)
+        settingsDataController.setDidMigrateAutoSignTalkPageDiscussions(true)
+        UserDefaults.standard.removeObject(forKey: legacyKey)
+    }
+
+    private func migrateShowLanguageBar() {
+        let legacyKey = "ShowLanguageBar"
+        let settingsDataController = WMFSettingsDataController.shared
+        guard let legacyValue = UserDefaults.standard.object(forKey: legacyKey) as? NSNumber else {
+            // No legacy value — set default to true if not yet stored
+            let hasStoredValue = UserDefaults.standard.object(forKey: WMFUserDefaultsKey.showSearchLanguageBar.rawValue) != nil
+            if !hasStoredValue {
+                settingsDataController.setShowSearchLanguageBar(true)
+            }
+            return
+        }
+        settingsDataController.setShowSearchLanguageBar(legacyValue.boolValue)
+        UserDefaults.standard.removeObject(forKey: legacyKey)
+    }
+
+    private func migrateOpenAppOnSearchTab() {
+        let legacyKey = "WMFOpenAppOnSearchTab"
+        guard UserDefaults.standard.object(forKey: legacyKey) != nil else {
+            return
+        }
+        let legacyValue = UserDefaults.standard.bool(forKey: legacyKey)
+        let settingsDataController = WMFSettingsDataController.shared
+        Task {
+            await settingsDataController.setOpenAppOnSearchTab(legacyValue)
+        }
+        UserDefaults.standard.removeObject(forKey: legacyKey)
+    }
+
+    private func migrateIsSubscribedToEchoNotifications() {
+        let legacyKey = "WMFIsSubscribedToEchoNotifications"
+        guard UserDefaults.standard.object(forKey: legacyKey) != nil else {
+            return
+        }
+        let legacyValue = UserDefaults.standard.bool(forKey: legacyKey)
+        let store = WMFDataEnvironment.current.userDefaultsStore
+        try? store?.save(key: WMFUserDefaultsKey.isSubscribedToEchoNotifications.rawValue, value: legacyValue)
+        UserDefaults.standard.removeObject(forKey: legacyKey)
+    }
+
     @objc func setupWMFDataEnvironment() {
         WMFDataEnvironment.current.mediaWikiService = MediaWikiFetcher(session: dataStore.session, configuration: dataStore.configuration)
-        
+
         switch Configuration.current.environment {
         case .staging:
             WMFDataEnvironment.current.serviceEnvironment = .staging
         default:
             WMFDataEnvironment.current.serviceEnvironment = .production
         }
-        
+
         WMFDataEnvironment.current.userAgentUtility = {
             return WikipediaAppUtils.versionedUserAgent()
         }
-        
+
         WMFDataEnvironment.current.appInstallIDUtility = {
-            return UserDefaults.standard.wmf_appInstallId
+            return try? WMFDataEnvironment.current.crossProcessUserDefaultsStore?.load(key: WMFUserDefaultsKey.appInstallID.rawValue)
         }
-        
+
         WMFDataEnvironment.current.acceptLanguageUtility = {
             return Locale.acceptLanguageHeaderForPreferredLanguages
         }
-        
+
+        WMFDataEnvironment.current.httpErrorLogger = { info in
+            ClientErrorFunnel.shared.logHTTPError(info: info)
+        }
+
         WMFDataEnvironment.current.sharedCacheStore = SharedContainerCacheStore()
-        
+
         let languages = dataStore.languageLinkController.preferredLanguages.map { WMFLanguage(languageCode: $0.languageCode, languageVariantCode: $0.languageVariantCode) }
         WMFDataEnvironment.current.appData = WMFAppData(appLanguages: languages)
+
+        WMFDataEnvironment.current.testKitchenClient = TestKitchenAdapter.shared.client
+
+        evaluateAppInstallAndSessionIDs()
+        
+        #if TEST || UITEST
+            TestNetworkFixtureInterceptor.configureBasicServiceIfNeeded()
+        #endif
+        // Notify the scene delegate that the data environment is ready, so it can submit any
+        // deferred app_open event (e.g. on fresh install where languages weren't set up yet).
+        #if !TEST
+        if let sceneDelegate = UIApplication.shared.connectedScenes.first?.delegate as? SceneDelegate {
+            sceneDelegate.dataEnvironmentDidSetup()
+        }
+        #endif
     }
     
+    private func evaluateAppInstallAndSessionIDs() {
+        
+        let legacyAppInstallID = UserDefaults.standard.string(forKey: WMFAppInstallId)
+        let legacySessionID = UserDefaults.standard.wmf_sessionID
+        
+        let store = WMFDataEnvironment.current.crossProcessUserDefaultsStore
+        let appInstallID: String? = try? store?.load(key: WMFUserDefaultsKey.appInstallID.rawValue)
+        let sessionID: String? = try? store?.load(key: WMFUserDefaultsKey.appInstallID.rawValue)
+        
+        if legacyAppInstallID == nil && appInstallID == nil {
+            // This is likely a fresh install! Generate a new app install ID
+            
+            let newAppInstallId = UUID().uuidString
+            try? store?.save(key: WMFUserDefaultsKey.appInstallID.rawValue, value: newAppInstallId)
+        } else {
+            
+            // Check to see if migrations are needed
+            if legacyAppInstallID != nil && appInstallID == nil {
+                try? store?.save(key: WMFUserDefaultsKey.appInstallID.rawValue, value: legacyAppInstallID)
+                UserDefaults.standard.wmf_appInstallId = nil
+            }
+            
+            if legacySessionID != nil && sessionID == nil {
+                try? store?.save(key: WMFUserDefaultsKey.sessionID.rawValue, value: legacySessionID)
+                UserDefaults.standard.wmf_sessionID = nil
+            }
+        }
+    }
+
     @objc func updateWMFDataEnvironmentFromLanguagesDidChange() {
         let languages = dataStore.languageLinkController.preferredLanguages.map { WMFLanguage(languageCode: $0.languageCode, languageVariantCode: $0.languageVariantCode) }
         WMFDataEnvironment.current.appData = WMFAppData(appLanguages: languages)
     }
-    
+
     @objc func performWMFDataHousekeeping() {
         let coreDataStore = WMFDataEnvironment.current.coreDataStore
         Task {
@@ -682,7 +848,7 @@ extension WMFAppViewController {
             }
         }
     }
-    
+
     @objc func deleteYearInReviewPersonalizedNetworkData() {
         Task {
             do {
@@ -702,871 +868,81 @@ extension WMFAppViewController {
         let wmfTheme = Theme.wmfTheme(from: theme)
         WMFAppEnvironment.current.set(theme: wmfTheme, traitCollection: traitCollection)
     }
-    
+
     @objc func appEnvironmentTraitCollectionIsDifferentThanTraitCollection(_ traitCollection: UITraitCollection) -> Bool {
         return WMFAppEnvironment.current.traitCollection.hasDifferentColorAppearance(comparedTo: traitCollection)
+        || WMFAppEnvironment.current.traitCollection.preferredContentSizeCategory != traitCollection.preferredContentSizeCategory
     }
 
-    @objc func generateHistoryTab() -> WMFHistoryViewController {
-
-        // data controller properties
-        let recordsProvider: WMFHistoryDataController.RecordsProvider = { [weak self] in
-
-            guard let self else {
-                return []
-            }
-
-            let request: NSFetchRequest<WMFArticle> = WMFArticle.fetchRequest()
-            request.predicate = NSPredicate(format: "viewedDate != NULL")
-            request.sortDescriptors = [
-                NSSortDescriptor(keyPath: \WMFArticle.viewedDateWithoutTime, ascending: false),
-                NSSortDescriptor(keyPath: \WMFArticle.viewedDate, ascending: false)
-            ]
-            request.fetchLimit = 1000
-
-            do {
-                var articles: [HistoryRecord] = []
-                let articleFetchRequest = try dataStore.viewContext.fetch(request)
-                
-                let thumbnailImageWidth = UIScreen.main.wmf_listThumbnailWidthForScale().intValue
-
-                for article in articleFetchRequest {
-                    if let viewedDate = article.viewedDate, let pageID = article.pageID {
-
-                        let record = HistoryRecord(
-                            id: Int(truncating: pageID),
-                            title: article.displayTitle ?? article.displayTitleHTML,
-                            descriptionOrSnippet: article.capitalizedWikidataDescriptionOrSnippet,
-                            shortDescription: article.snippet,
-                            articleURL: article.url,
-                            imageURL: article.imageURL(forWidth: thumbnailImageWidth)?.absoluteString,
-                            viewedDate: viewedDate,
-                            isSaved: article.isSaved,
-                            snippet: article.snippet,
-                            variant: article.variant
-                        )
-                        articles.append(record)
-                    }
-                }
-
-                return articles
-
-            } catch {
-                DDLogError("Error fetching history: \(error)")
-                return []
-            }
-        }
-
-        let historyDataController = WMFHistoryDataController(
-            recordsProvider: recordsProvider
-        )
-
-        // view model properties
-
-        let todayTitle = WMFLocalizedString("today-title", value: "Today", comment: "Title for today section on article view history")
-
-        let yesterdayTitle = WMFLocalizedString("yesterday-title", value: "Yesterday", comment: "Title for yesterday section on article view history")
-
-        let localizedStrings = WMFHistoryViewModel.LocalizedStrings(emptyViewTitle: CommonStrings.emptyNoHistoryTitle, emptyViewSubtitle: CommonStrings.emptyNoHistorySubtitle, todayTitle: todayTitle, yesterdayTitle: yesterdayTitle, openArticleActionTitle: CommonStrings.articleTabsOpen, saveForLaterActionTitle: CommonStrings.saveTitle, unsaveActionTitle: CommonStrings.unsaveTitle, shareActionTitle: CommonStrings.shareMenuTitle, deleteSwipeActionLabel: CommonStrings.deleteActionTitle)
-        let viewModel = WMFHistoryViewModel(emptyViewImage: UIImage(named: "history-blank"), localizedStrings: localizedStrings, historyDataController: historyDataController)
-
-        let viewController = WMFHistoryViewController(viewModel: viewModel, dataController: historyDataController, theme: theme, dataStore: dataStore)
-        return viewController
-    }
-
-    @objc func generateActivityTab(exploreViewController: ExploreViewController) -> WMFActivityTabViewController {
-        
-        var wikimediaProject: WikimediaProject? = nil
-        var wmfProject: WMFProject? = nil
-        if let siteURL = dataStore.languageLinkController.appLanguage?.siteURL,
-        let project = WikimediaProject(siteURL: siteURL) {
-            wikimediaProject = project
-            wmfProject = project.wmfProject
-        }
-
-        // CLEANUP: near-duplicate closures just for logging
-        let openHistoryClosure = { [weak self] in
-            guard let self = self else { return }
-            
-            if let wikimediaProject {
-                EditInteractionFunnel.shared.logActivityTabDidTapViewReadingHistory(project: wikimediaProject)
-            }
-
-            guard let navigationController = self.currentTabNavigationController else {
-                return
-            }
-
-            let historyVC = generateHistoryTab()
-            navigationController.pushViewController(historyVC, animated: true)
-        }
-        
-        let openHistoryLoggedOutClosure = { [weak self] in
-            guard let self = self else { return }
-            
-            if let wikimediaProject {
-                EditInteractionFunnel.shared.logActivityTabLoggedOutDidTapViewReadingHistory(project: wikimediaProject)
-            }
-
-            guard let navigationController = self.currentTabNavigationController else {
-                return
-            }
-
-            let historyVC = generateHistoryTab()
-            navigationController.pushViewController(historyVC, animated: true)
-        }
-        
-        let openSavedArticlesClosure = { [weak self] in
-            guard let self = self else { return }
-            
-            if let wikimediaProject {
-                EditInteractionFunnel.shared.logActivityTabDidTapSavedCapsule(project: wikimediaProject)
-            }
-            
-            self.dismissPresentedViewControllers()
-            withAnimation {
-                self.selectedIndex = AppTab.saved.rawValue
-            }
-        }
-        
-        let openSuggestedEditsClosure = { [weak self] in
-            guard let self = self, let navigationController = self.currentTabNavigationController else {
-                return
-            }
-            
-            if let wikimediaProject {
-                EditInteractionFunnel.shared.logActivityTabDidTapEditEmptyCapsule(project: wikimediaProject)
-            }
-            
-            guard let vc = WMFImageRecommendationsViewController.imageRecommendationsViewController(
-                dataStore: dataStore,
-                imageRecDelegate: self,
-                imageRecLoggingDelegate: self) else {
-                return
-            }
-            
-            navigationController.pushViewController(vc, animated: true)
-        }
-
-        let openStartEditing = { [weak self] in
-            guard let self = self, let navigationController = self.currentTabNavigationController else {
-                return
-            }
-            
-            if let wikimediaProject {
-                EditInteractionFunnel.shared.logActivityTabDidTapEditEmptyCapsule(project: wikimediaProject)
-            }
-
-            if let url = URL(string: "https://www.mediawiki.org/wiki/Special:MyLanguage/Wikimedia_Apps/iOS_FAQ#Editing") {
-                let config = SinglePageWebViewController.StandardConfig(url: url, useSimpleNavigationBar: true)
-                let webVC = SinglePageWebViewController(configType: .standard(config), theme: theme)
-                let newNavigationVC =
-                WMFComponentNavigationController(rootViewController: webVC, modalPresentationStyle: .formSheet)
-                navigationController.present(newNavigationVC, animated: true)
-            }
-
-        }
-        
-        let openEditingHistory = { [weak self] in
-            
-            guard let self else { return }
-            
-            guard let username = self.dataStore.authenticationManager.authStatePermanentUsername else {
-                return
-            }
-            
-            if let wikimediaProject {
-                EditInteractionFunnel.shared.logActivityTabDidTapEditPopulatedCapsule(project: wikimediaProject)
-            }
-
-            guard let url = self.dataStore.languageLinkController.appLanguage?.siteURL.wmf_URL(withPath: "/wiki/Special:Contributions/\(username)") else {
-                showGenericError()
-                return
-            }
-
-            navigate(to: url)
-
-        }
-        
-        func greeting(username: String) -> String {
-            let openingBold = "<b>"
-            let closingBold = "</b>"
-            let format = WMFLocalizedString("activity-tab-greeting", value: "%1$@Hi %2$@%3$@ 👋 Here's your weekly Wikipedia summary.",
-              comment: "$1 is opening bold, $2 is the username, $3 is closing bold.")
-            return String.localizedStringWithFormat(format, openingBold, username, closingBold)
-        }
-        
-        let activityTabSaveTitle: (Int) -> String = { count in
-            CommonStrings.activityTabArticleSavedNumber(amount: count)
-        }
-        
-        let activityTabReadTitle: (Int) -> String = { count in
-            CommonStrings.activityTabArticleReadNumber(amount: count)
-        }
-        
-        let activityTabEditedTitle: (Int) -> String = { count in
-            CommonStrings.activityTabArticleEditedNumber(amount: count)
-        }
-        
-        let greeting: () -> String = { [weak self] in
-            guard let self else { return "" }
-            return greeting(username: self.dataStore.authenticationManager.authStatePermanentUsername ?? "")
-        }
-
-        let isLoggedIn = dataStore.authenticationManager.authStateIsPermanent
-        let localizedStrings = WMFActivityViewModel.LocalizedStrings(
-            activityTabNoEditsAddImagesTitle: CommonStrings.activityTabNoEditsAddImagesTitle,
-            activityTabNoEditsGenericTitle: CommonStrings.activityTabNoEditsGenericTitle,
-            getActivityTabSaveTitle: activityTabSaveTitle,
-            getActivityTabReadTitle: activityTabReadTitle,
-            getActivityTabsEditTitle: activityTabEditedTitle,
-            tabTitle: CommonStrings.activityTitle,
-            getGreeting: greeting,
-            viewHistory: CommonStrings.activityTabReadingHistory,
-            viewSaved: CommonStrings.activityTabViewSavedArticlesTitle,
-            viewEdited: CommonStrings.activityTabViewEditingTitle,
-            logIn: CommonStrings.editSignIn,
-            loggedOutTitle: CommonStrings.activityTabLoggedOutTitle,
-            loggedOutSubtitle: CommonStrings.actitvityTabLoggedOutSubtitle
-        )
-        
-        let viewModel = WMFActivityViewModel(
-            localizedStrings: localizedStrings,
-            openHistory: openHistoryClosure,
-            openHistoryLoggedOut: openHistoryLoggedOutClosure,
-            openSavedArticles: openSavedArticlesClosure,
-            openSuggestedEdits: openSuggestedEditsClosure,
-            openStartEditing: openStartEditing,
-            openEditingHistory: openEditingHistory,
-            loginAction: nil,
-            isLoggedIn: isLoggedIn)
-        
-        viewModel.savedSlideDataDelegate = dataStore.savedPageList
-        viewModel.legacyPageViewsDataDelegate = dataStore
-        
-        let showSurveyClosure = { [weak self] in
-            guard let self = self else { return }
-            let surveyVC = self.surveyViewController()
-            self.currentTabNavigationController?.present(surveyVC, animated: true, completion: {
-                
-                if let wikimediaProject {
-                    EditInteractionFunnel.shared.logActivityTabSurveyDidAppear(project: wikimediaProject)
-                }
-                
-            })
-        }
-
-        let activityTabViewController = WMFActivityTabViewController(viewModel: viewModel, theme: theme, showSurvey: showSurveyClosure, dataStore: dataStore)
-        
-        let loginAction = { [weak self] in
-            
-            if let wikimediaProject {
-                EditInteractionFunnel.shared.logActivityTabLoggedOutDidTapLogin(project: wikimediaProject)
-            }
-            
-            guard let self = self else { return }
-
-            guard let navigationController = self.currentTabNavigationController else {
-                print("navigationController is nil")
-                return
-            }
-            
-            LoginFunnel.shared.logLoginStartFromActivityTab()
-            
-            let loginCoordinator = LoginCoordinator(navigationController: navigationController, theme: theme)
-            loginCoordinator.createAccountSuccessCustomDismissBlock = { [weak self] in
-                
-                guard let self else { return }
-                
-                self.updateActivityTabLoginState(activityTabViewController: activityTabViewController)
-            }
-            
-            loginCoordinator.loginSuccessCompletion = { [weak self] in
-                
-                guard let self else { return }
-                
-                self.updateActivityTabLoginState(activityTabViewController: activityTabViewController)
-            }
-
-            loginCoordinator.start()
-        }
-        
-        if let wmfProject {
-            viewModel.project = wmfProject
-        }
-        
-        if let username = dataStore.authenticationManager.authStatePermanentUsername {
-            viewModel.username = username
-        }
-        
-        viewModel.loginAction = loginAction
-        
-        return activityTabViewController
-    }
-    
-    @objc func updateActivityTabProject(activityTabViewController: WMFActivityTabViewController) {
-        if let siteURL = dataStore.languageLinkController.appLanguage?.siteURL,
-           let wikimediaProject = WikimediaProject(siteURL: siteURL),
-           let wmfProject = wikimediaProject.wmfProject {
-            activityTabViewController.viewModel.project = wmfProject
-        }
-    }
-    
-    @objc func updateActivityTabLoginState(activityTabViewController: WMFActivityTabViewController) {
-        let isLoggedIn = dataStore.authenticationManager.authStateIsPermanent
-        activityTabViewController.viewModel.isLoggedIn = isLoggedIn
-        
-        if let username = dataStore.authenticationManager.authStatePermanentUsername {
-            activityTabViewController.viewModel.username = username
-        }
-    }
-    
-    private func surveyViewController() -> UIViewController {
-        
-        var wikimediaProject: WikimediaProject? = nil
-        if let siteURL = dataStore.languageLinkController.appLanguage?.siteURL,
-        let project = WikimediaProject(siteURL: siteURL) {
-            wikimediaProject = project
-        }
-        
-        let surveyLocalizedStrings = WMFSurveyViewModel.LocalizedStrings(
-            title: CommonStrings.satisfactionSurveyTitle,
-            cancel: CommonStrings.cancelActionTitle,
-            submit: CommonStrings.surveySubmitActionTitle,
-            subtitle: CommonStrings.activityTabSurvey,
-            instructions: nil,
-            otherPlaceholder: CommonStrings.surveyAdditionalThoughts
-        )
-
-        let surveyOptions = [
-            WMFSurveyViewModel.OptionViewModel(text: CommonStrings.surveyVerySatisfied, apiIdentifer: "1"),
-            WMFSurveyViewModel.OptionViewModel(text: CommonStrings.surveySatisfied, apiIdentifer: "2"),
-            WMFSurveyViewModel.OptionViewModel(text: CommonStrings.surveyNeutral, apiIdentifer: "3"),
-            WMFSurveyViewModel.OptionViewModel(text: CommonStrings.surveyUnsatisfied, apiIdentifer: "4"),
-            WMFSurveyViewModel.OptionViewModel(text: CommonStrings.surveyVeryUnsatisfied, apiIdentifer: "5")
-        ]
-
-        let surveyView = WMFSurveyView(viewModel: WMFSurveyViewModel(localizedStrings: surveyLocalizedStrings, options: surveyOptions, selectionType: .single), cancelAction: { [weak self] in
-            
-            if let wikimediaProject {
-                EditInteractionFunnel.shared.logActivityTabSurveyDidTapCancel(project: wikimediaProject)
-            }
-            
-            self?.currentTabNavigationController?.dismiss(animated: true)
-        }, submitAction: { [weak self] options, otherText in
-            
-            if let wikimediaProject {
-                EditInteractionFunnel.shared.logActivityTabSurveyDidTapSubmit(options: options, otherText: otherText, project: wikimediaProject)
-            }
-            
-            self?.currentTabNavigationController?.dismiss(animated: true, completion: {
-                let image = UIImage(systemName: "checkmark.circle.fill")
-                WMFAlertManager.sharedInstance.showBottomAlertWithMessage(CommonStrings.feedbackSurveyToastTitle, subtitle: nil, image: image, type: .custom, customTypeName: "feedback-submitted", dismissPreviousAlerts: true)
-            })
-        })
-
-        let hostedView = WMFComponentHostingController(rootView: surveyView)
-        return hostedView
-    }
-}
-
-// MARK: Activity Tab Image Recommendations flow conformances. Delete after Activity Tab experiment ends.
-
-extension WMFAppViewController: WMFImageRecommendationsDelegate, InsertMediaSettingsViewControllerDelegate, InsertMediaSettingsViewControllerLoggingDelegate {
-    func insertMediaSettingsViewControllerDidTapProgress(imageWikitext: String, caption: String?, altText: String?, localizedFileTitle: String) {
-        
-        guard let viewModel = self.imageRecommendationsViewModelWrapper?.viewModel,
-        let currentRecommendation = viewModel.currentRecommendation,
-                    let siteURL = viewModel.project.siteURL,
-              let articleURL = siteURL.wmf_URL(withTitle: currentRecommendation.title),
-        let articleWikitext = currentRecommendation.imageData.wikitext else {
-            return
-        }
-        
-        currentRecommendation.caption = caption
-        currentRecommendation.altText = altText
-        currentRecommendation.imageWikitext = imageWikitext
-        currentRecommendation.localizedFileTitle = localizedFileTitle
-        
-        do {
-            let wikitextWithImage = try WMFWikitextUtils.insertImageWikitextIntoArticleWikitextAfterTemplates(imageWikitext: imageWikitext, into: articleWikitext)
-            
-            currentRecommendation.fullArticleWikitextWithImage = wikitextWithImage
-            
-            let editPreviewViewController = EditPreviewViewController(pageURL: articleURL)
-            editPreviewViewController.theme = theme
-            editPreviewViewController.sectionID = 0
-            editPreviewViewController.languageCode = articleURL.wmf_languageCode
-            editPreviewViewController.wikitext = wikitextWithImage
-            editPreviewViewController.delegate = self
-            editPreviewViewController.loggingDelegate = self
-
-            currentTabNavigationController?.pushViewController(editPreviewViewController, animated: true)
-        } catch {
-            showGenericError()
-        }
-    }
-    
-    func logInsertMediaSettingsViewControllerDidAppear() {
-        ImageRecommendationsFunnel.shared.logAddImageDetailsDidAppear()
-    }
-    
-    func logInsertMediaSettingsViewControllerDidTapFileName() {
-        ImageRecommendationsFunnel.shared.logAddImageDetailsDidTapFileName()
-    }
-    
-    func logInsertMediaSettingsViewControllerDidTapCaptionLearnMore() {
-        ImageRecommendationsFunnel.shared.logAddImageDetailsDidTapCaptionLearnMore()
-    }
-    
-    func logInsertMediaSettingsViewControllerDidTapAltTextLearnMore() {
-        ImageRecommendationsFunnel.shared.logAddImageDetailsDidTapAltTextLearnMore()
-    }
-    
-    func logInsertMediaSettingsViewControllerDidTapAdvancedSettings() {
-        ImageRecommendationsFunnel.shared.logAddImageDetailsDidTapAdvancedSettings()
-    }
-    
-    public func imageRecommendationsUserDidTapLearnMore(url: URL?) {
-        navigate(to: url, useSafari: false)
-    }
-    
-    public func imageRecommendationsUserDidTapReportIssue() {
-        let emailAddress = "ios-support@wikimedia.org"
-        let emailSubject = WMFLocalizedString("image-recommendations-email-title", value: "Issue Report - Add an Image Feature", comment: "Title text for Image recommendations pre-filled issue report email")
-        let emailBodyLine1 = WMFLocalizedString("image-recommendations-email-first-line", value: "I’ve encountered a problem with the Add an Image Suggested Edits Feature:", comment: "Text for Image recommendations pre-filled issue report email")
-        let emailBodyLine2 = WMFLocalizedString("image-recommendations-email-second-line", value: "- [Describe specific problem]", comment: "Text for Image recommendations pre-filled issue report email. This text is intended to be replaced by the user with a description of the problem they are encountering")
-        let emailBodyLine3 = WMFLocalizedString("image-recommendations-email-third-line", value: "The behavior I would like to see is:", comment: "Text for Image recommendations pre-filled issue report email")
-        let emailBodyLine4 = WMFLocalizedString("image-recommendations-email-fourth-line", value: "- [Describe proposed solution]", comment: "Text for Image recommendations pre-filled issue report email. This text is intended to be replaced by the user with a description of a user suggested solution")
-        let emailBodyLine5 = WMFLocalizedString("image-recommendations-email-fifth-line", value: "[Screenshots or Links]", comment: "Text for Image recommendations pre-filled issue report email. This text is intended to be replaced by the user with a screenshot or link.")
-        let emailBody = "\(emailBodyLine1)\n\n\(emailBodyLine2)\n\n\(emailBodyLine3)\n\n\(emailBodyLine4)\n\n\(emailBodyLine5)"
-        let mailto = "mailto:\(emailAddress)?subject=\(emailSubject)&body=\(emailBody)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
-
-        guard let encodedMailto = mailto, let mailtoURL = URL(string: encodedMailto), UIApplication.shared.canOpenURL(mailtoURL) else {
-            WMFAlertManager.sharedInstance.showErrorAlertWithMessage(CommonStrings.noEmailClient, sticky: false, dismissPreviousAlerts: false)
-            return
-        }
-        UIApplication.shared.open(mailtoURL)
-    }
-    
-    public func imageRecommendationsUserDidTapImage(project: WMFProject, data: WMFImageRecommendationsViewModel.WMFImageRecommendationData, presentingVC: UIViewController) {
-
-        guard let siteURL = project.siteURL,
-              let articleURL = siteURL.wmf_URL(withTitle: data.pageTitle) else {
-            return
-        }
-
-        let item = MediaListItem(title: "File:\(data.filename)", sectionID: 0, type: .image, showInGallery: true, isLeadImage: false, sources: nil)
-        let mediaList = MediaList(items: [item])
-
-        let gallery = MediaListGalleryViewController(articleURL: articleURL, mediaList: mediaList, dataStore: dataStore, initialItem: item, theme: theme, dismissDelegate: nil)
-        presentingVC.present(gallery, animated: true)
-    }
-
-    public func imageRecommendationsUserDidTapViewArticle(project: WMFData.WMFProject, title: String) {
-        
-        guard let navigationController = currentTabNavigationController,
-              let siteURL = project.siteURL,
-              let articleURL = siteURL.wmf_URL(withTitle: title) else {
-            return
-        }
-        
-        let coordinator = ArticleCoordinator(navigationController: navigationController, articleURL: articleURL, dataStore: dataStore, theme: theme, source: .undefined)
-        coordinator.start()
-    }
-    
-    public func imageRecommendationsUserDidTapImageLink(commonsURL: URL) {
-        navigate(to: commonsURL, useSafari: false)
-        ImageRecommendationsFunnel.shared.logCommonsWebViewDidAppear()
-    }
-
-    public func imageRecommendationsUserDidTapInsertImage(viewModel: WMFImageRecommendationsViewModel, title: String, with imageData: WMFImageRecommendationsViewModel.WMFImageRecommendationData) {
-        guard let currentTabNavigationController else { return }
-
-        guard let image = imageData.uiImage,
-        let siteURL = viewModel.project.siteURL else {
-            return
-        }
-        
-        if let imageURL = URL(string: imageData.descriptionURL),
-           let thumbURL = URL(string: imageData.thumbUrl) {
-
-            let fileName = imageData.filename.normalizedPageTitle ?? imageData.filename
-            let imageDescription = imageData.description?.removingHTML
-            let searchResult = InsertMediaSearchResult(fileTitle: "File:\(imageData.filename)", displayTitle: fileName, thumbnailURL: thumbURL, imageDescription: imageDescription,  filePageURL: imageURL)
-            
-            let insertMediaViewController = InsertMediaSettingsViewController(
-                image: image,
-                searchResult: searchResult,
-                fromImageRecommendations: true,
-                delegate: self,
-                imageRecLoggingDelegate: self,
-                theme: theme,
-                siteURL: siteURL)
-            self.imageRecommendationsViewModelWrapper = WMFImageRecommendationsViewModelObjcWrapper(viewModel: viewModel)
-            currentTabNavigationController.pushViewController(insertMediaViewController, animated: true)
-        }
-    }
-    
-    public func imageRecommendationsDidTriggerError(_ error: any Error) {
-        WMFAlertManager.sharedInstance.showErrorAlert(error, sticky: false, dismissPreviousAlerts: true)
-    }
-
-    public func imageRecommendationsDidTriggerTimeWarning() {
-        let warningmessage = WMFLocalizedString("image-recs-time-warning-message", value: "Please review the article to understand its topic and inspect the image", comment: "Message displayed in a warning when a user taps yes to an image recommendation within 5 seconds or less")
-        WMFAlertManager.sharedInstance.showBottomAlertWithMessage(warningmessage, subtitle: nil, image: nil, type: .normal, customTypeName: nil, dismissPreviousAlerts: true)
-    }
-}
-
-
-extension WMFAppViewController: WMFImageRecommendationsLoggingDelegate {
-
-    public func logOnboardingDidTapPrimaryButton() {
-        ImageRecommendationsFunnel.shared.logOnboardingDidTapContinue()
-    }
-    
-    public func logOnboardingDidTapSecondaryButton() {
-        ImageRecommendationsFunnel.shared.logOnboardingDidTapLearnMore()
-    }
-    
-    public func logTooltipsDidTapFirstNext() {
-        ImageRecommendationsFunnel.shared.logTooltipDidTapFirstNext()
-    }
-    
-    public func logTooltipsDidTapSecondNext() {
-        ImageRecommendationsFunnel.shared.logTooltipDidTapSecondNext()
-    }
-    
-    public func logTooltipsDidTapThirdOK() {
-        ImageRecommendationsFunnel.shared.logTooltipDidTapThirdOk()
-    }
-    
-    public func logBottomSheetDidAppear() {
-        ImageRecommendationsFunnel.shared.logBottomSheetDidAppear()
-    }
-
-    public func logDialogWarningMessageDidDisplay(fileName: String, recommendationSource: String) {
-        ImageRecommendationsFunnel.shared.logDialogWarningMessageDidDisplay(fileName: fileName, recommendationSource: recommendationSource)
-    }
-
-    public func logBottomSheetDidTapYes() {
-        
-        if let viewModel = self.imageRecommendationsViewModelWrapper?.viewModel,
-              let currentRecommendation = viewModel.currentRecommendation,
-           let siteURL = viewModel.project.siteURL,
-           let pageURL = siteURL.wmf_URL(withTitle: currentRecommendation.title) {
-            currentRecommendation.suggestionAcceptDate = Date()
-            EditAttemptFunnel.shared.logInit(pageURL: pageURL)
-        }
-        
-        ImageRecommendationsFunnel.shared.logBottomSheetDidTapYes()
-    }
-    
-    public func logBottomSheetDidTapNo() {
-        ImageRecommendationsFunnel.shared.logBottomSheetDidTapNo()
-    }
-    
-    public func logBottomSheetDidTapNotSure() {
-        ImageRecommendationsFunnel.shared.logBottomSheetDidTapNotSure()
-    }
-    
-    public func logOverflowDidTapLearnMore() {
-        ImageRecommendationsFunnel.shared.logOverflowDidTapLearnMore()
-    }
-    
-    public func logOverflowDidTapTutorial() {
-        ImageRecommendationsFunnel.shared.logOverflowDidTapTutorial()
-    }
-    
-    public func logOverflowDidTapProblem() {
-        ImageRecommendationsFunnel.shared.logOverflowDidTapProblem()
-    }
-    
-    public func logBottomSheetDidTapFileName() {
-        ImageRecommendationsFunnel.shared.logBottomSheetDidTapFileName()
-    }
-    
-    public func logRejectSurveyDidAppear() {
-        ImageRecommendationsFunnel.shared.logRejectSurveyDidAppear()
-    }
-    
-    public func logRejectSurveyDidTapCancel() {
-        ImageRecommendationsFunnel.shared.logRejectSurveyDidTapCancel()
-    }
-    
-    public func logRejectSurveyDidTapSubmit(rejectionReasons: [String], otherReason: String?, fileName: String, recommendationSource: String) {
-        
-        ImageRecommendationsFunnel.shared.logRejectSurveyDidTapSubmit(rejectionReasons: rejectionReasons, otherReason: otherReason, fileName: fileName, recommendationSource: recommendationSource)
-    }
-    
-    public func logEmptyStateDidAppear() {
-        ImageRecommendationsFunnel.shared.logEmptyStateDidAppear()
-    }
-    
-    public func logEmptyStateDidTapBack() {
-        ImageRecommendationsFunnel.shared.logEmptyStateDidTapBack()
-    }
-}
-
-extension WMFAppViewController: EditPreviewViewControllerDelegate {
-    func editPreviewViewControllerDidTapNext(pageURL: URL, sectionID: Int?, editPreviewViewController: EditPreviewViewController) {
-        guard let saveVC = EditSaveViewController.wmf_initialViewControllerFromClassStoryboard() else {
-            return
-        }
-
-        saveVC.dataStore = dataStore
-        saveVC.pageURL = pageURL
-        saveVC.sectionID = sectionID
-        saveVC.languageCode = pageURL.wmf_languageCode
-        saveVC.wikitext = editPreviewViewController.wikitext
-        saveVC.cannedSummaryTypes = [.addedImage, .addedImageAndCaption]
-        saveVC.needsSuppressPosting = WMFDeveloperSettingsDataController.shared.doNotPostImageRecommendationsEdit
-        saveVC.editTags = [.appSuggestedEdit, .appImageAddTop]
-
-        saveVC.delegate = self
-        saveVC.imageRecLoggingDelegate = self
-        saveVC.theme = self.theme
-        
-        currentTabNavigationController?.pushViewController(saveVC, animated: true)
-    }
-}
-
-extension WMFAppViewController: EditSaveViewControllerDelegate {
-    
-    func editSaveViewControllerDidSave(_ editSaveViewController: EditSaveViewController, result: Result<EditorChanges, any Error>, needsNewTempAccountToast: Bool? = false) {
-        
-        switch result {
-        case .success(let changes):
-            sendFeedbackAndPopToImageRecommendations(revID: changes.newRevisionID)
-        case .failure(let error):
-            showError(error)
-        }
-    }
-    
-    private func sendFeedbackAndPopToImageRecommendations(revID: UInt64) {
-
-        guard let viewControllers = currentTabNavigationController?.viewControllers,
-              let imageRecommendationsViewModel = imageRecommendationsViewModelWrapper?.viewModel,
-        let currentRecommendation = imageRecommendationsViewModel.currentRecommendation else {
-            return
-        }
-        
-        for viewController in viewControllers {
-            if viewController is WMFImageRecommendationsViewController {
-                currentTabNavigationController?.popToViewController(viewController, animated: true)
-                
-                // Send Feedback
-                imageRecommendationsViewModel.sendFeedback(editRevId: revID, accepted: true, caption: currentRecommendation.caption) { result in
-                }
-                
-                currentRecommendation.lastRevisionID = revID
-                
-                // Go to next recommendation and display success alert
-                imageRecommendationsViewModel.next {
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-
-                        let title = CommonStrings.editPublishedToastTitle
-                        let image = UIImage(systemName: "checkmark.circle.fill")
-                        
-                        if UIAccessibility.isVoiceOverRunning {
-                            UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: title)
-                        } else {
-                            WMFAlertManager.sharedInstance.showBottomAlertWithMessage(title, subtitle: nil, image: image, type: .custom, customTypeName: "edit-published", dismissPreviousAlerts: true)
-                        }
-                    }
-                    
-                }
-                
-                break
-            }
-        }
-    }
-
-    
-    func editSaveViewControllerWillCancel(_ saveData: EditSaveViewController.SaveData) {
-        // no-op
-    }
-    
-    func editSaveViewControllerDidTapShowWebPreview() {
-        assertionFailure("This should not be called in the Image Recommendations context")
-    }
-}
-
-extension WMFAppViewController: EditSaveViewControllerImageRecLoggingDelegate {
-    
-    func logEditSaveViewControllerDidAppear() {
-        ImageRecommendationsFunnel.shared.logSaveChangesDidAppear()
-    }
-    
-    func logEditSaveViewControllerDidTapBack() {
-        ImageRecommendationsFunnel.shared.logSaveChangesDidTapBack()
-    }
-    
-    func logEditSaveViewControllerDidTapMinorEditsLearnMore() {
-        ImageRecommendationsFunnel.shared.logSaveChangesDidTapMinorEditsLearnMore()
-    }
-    
-    func logEditSaveViewControllerDidTapWatchlistLearnMore() {
-        ImageRecommendationsFunnel.shared.logSaveChangesDidTapWatchlistLearnMore()
-    }
-    
-    func logEditSaveViewControllerDidToggleWatchlist(isOn: Bool) {
-        ImageRecommendationsFunnel.shared.logSaveChangesDidToggleWatchlist(isOn: isOn)
-    }
-    
-    func logEditSaveViewControllerDidTapPublish(minorEditEnabled: Bool, watchlistEnabled: Bool) {
-        ImageRecommendationsFunnel.shared.logSaveChangesDidTapPublish(minorEditEnabled: minorEditEnabled, watchlistEnabled: watchlistEnabled)
-    }
-    
-    func logEditSaveViewControllerPublishSuccess(revisionID: Int, summaryAdded: Bool) {
-        
-        guard let viewModel = imageRecommendationsViewModelWrapper?.viewModel,
-              let currentRecommendation = viewModel.currentRecommendation else {
-            return
-        }
-        
-        var timeSpent: Int? = nil
-        if let suggestionAcceptDate = currentRecommendation.suggestionAcceptDate {
-            timeSpent = Int(Date().timeIntervalSince(suggestionAcceptDate))
-        }
-        
-        ImageRecommendationsFunnel.shared.logSaveChangesPublishSuccess(timeSpent: timeSpent, revisionID: revisionID, captionAdded: currentRecommendation.caption != nil, altTextAdded: currentRecommendation.altText != nil, summaryAdded: summaryAdded)
-        
-        EditInteractionFunnel.shared.logActivityTabImageRecsPublishSuccess(revisionID: revisionID, project: WikimediaProject(wmfProject: viewModel.project))
-    }
-    
-    func logEditSaveViewControllerLogPublishFailed(abortSource: String?) {
-        ImageRecommendationsFunnel.shared.logSaveChangesPublishFail(abortSource: abortSource)
-    }
-    
- }
-
-extension WMFAppViewController: EditPreviewViewControllerLoggingDelegate {
-    func logEditPreviewDidAppear() {
-        ImageRecommendationsFunnel.shared.logPreviewDidAppear()
-    }
-    
-    func logEditPreviewDidTapBack() {
-        ImageRecommendationsFunnel.shared.logPreviewDidTapBack()
-    }
-    
-    func logEditPreviewDidTapNext() {
-        
-        if let viewModel = imageRecommendationsViewModelWrapper?.viewModel,
-              let currentRecommendation = viewModel.currentRecommendation,
-           let siteURL = viewModel.project.siteURL,
-           let pageURL = siteURL.wmf_URL(withTitle: currentRecommendation.title) {
-            EditAttemptFunnel.shared.logSaveIntent(pageURL: pageURL)
-        }
-        
-        ImageRecommendationsFunnel.shared.logPreviewDidTapNext()
-    }
-}
-
-@objc public final class WMFImageRecommendationsViewModelObjcWrapper: NSObject {
-    public var viewModel: WMFImageRecommendationsViewModel?
-
-    public init(viewModel: WMFImageRecommendationsViewModel?) {
-        self.viewModel = viewModel
-        super.init()
-    }
-    
-    @objc override public init() {
-        // Nothing
-    }
 }
 
 // MARK: - Tabs
 
  extension WMFAppViewController {
-     
+
      @objc func assignMoreDynamicTabsV2ExperimentIfNeeded() {
-         do {
-             let assignment = try WMFArticleTabsDataController.shared.assignExperimentV2IfNeeded()
-             
-             let groupName: String
-             switch assignment {
-             case .control: groupName = "dynamic_a"
-             case .groupB: groupName = "dynamic_b"
-             case .groupC: groupName = "dynamic_c"
-             }
-             
-             ArticleTabsFunnel.shared.logGroupAssignment(group: groupName)
-         } catch {
-             DDLogError("Failed to assign more dynamic tabs v2 experiment: \(error)")
-         }
+         ArticleTabsFunnel.shared.logGroupAssignment(group: "dynamic_c")
      }
-     
-     @objc func checkAndCreateInitialArticleTab() {
-        let dataController = WMFArticleTabsDataController.shared
-         Task {
-             do {
-                 try await dataController.checkAndCreateInitialArticleTabIfNeeded()
-             } catch {
-                 DDLogError("Failed to check or create initial article tab: \(error)")
-             }
-         }
-     }
-     
+
      @objc func observeArticleTabsNSNotifications() {
               NotificationCenter.default.addObserver(self, selector: #selector(articleTabDeleted(_:)), name: WMFNSNotification.articleTabDeleted, object: nil)
          NotificationCenter.default.addObserver(self, selector: #selector(articleTabItemDeleted(_:)), name: WMFNSNotification.articleTabItemDeleted, object: nil)
           }
-          
+
       @objc func articleTabDeleted(_ note: Notification) {
           guard
              let tabIdentifier = note.userInfo?[WMFNSNotification.UserInfoKey.articleTabIdentifier] as? UUID
           else {
               return
           }
-          
+
           DispatchQueue.main.async {
               self.removeArticlesForDeletedTabParts(tabIdentifier: tabIdentifier)
           }
       }
-     
+
      @objc func articleTabItemDeleted(_ note: Notification) {
          guard
             let tabItemIdentifier = note.userInfo?[WMFNSNotification.UserInfoKey.articleTabItemIdentifier] as? UUID
          else {
              return
          }
-         
+
          DispatchQueue.main.async {
              self.removeArticlesForDeletedTabParts(tabItemIdentifier: tabItemIdentifier)
          }
      }
-     
+
      func removeArticlesForDeletedTabParts(tabIdentifier: UUID? = nil, tabItemIdentifier: UUID? = nil) {
          if let tabIdentifier {
-             tabIdentifiersToDelete.add(tabIdentifier)
+             tabIdentifiersToDelete.append(tabIdentifier)
          }
-         
+
          if let tabItemIdentifier {
-             tabItemIdentifiersToDelete.add(tabItemIdentifier)
+             tabItemIdentifiersToDelete.append(tabItemIdentifier)
          }
-         
+
          NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(debounceRemoveArticlesForDeletedTabParts), object: nil)
          perform(#selector(debounceRemoveArticlesForDeletedTabParts), with: nil, afterDelay: 0.5)
      }
-      
+
       /// Removes any articles from the navigation stack that belong to the deleted tab or a deleted article
      @objc func debounceRemoveArticlesForDeletedTabParts() {
-          
+
           guard let viewControllers else {
               return
           }
-          
+
           // Loop through all view controllers
           for viewController in viewControllers {
               // Check if it's a navigation controller
               guard let navigationController = viewController as? UINavigationController else {
                   continue
               }
-              
+
               // Get all view controllers in the navigation stack
               let viewControllers = navigationController.viewControllers
-              
+
               // Filter out any ArticleViewControllers that belong to the deleted tab
               let remainingViewControllers = viewControllers.filter { viewController in
                   if let articleViewController = viewController as? ArticleViewController,
@@ -1576,17 +952,382 @@ extension WMFAppViewController: EditPreviewViewControllerLoggingDelegate {
                         tabIdentifiersToDelete.contains(tabIdentifier) || tabItemIdentifiersToDelete.contains(tabItemIdentifier) {
                       return false // Remove this view controller
                   }
-                  
+
                   return true // Keep this view controller
               }
-              
+
               // Update the navigation stack if we removed any view controllers
               if remainingViewControllers.count < viewControllers.count {
                   navigationController.setViewControllers(remainingViewControllers, animated: false)
               }
           }
-         
-         tabIdentifiersToDelete.removeAllObjects()
-         tabItemIdentifiersToDelete.removeAllObjects()
+
+         tabIdentifiersToDelete.removeAll()
+         tabItemIdentifiersToDelete.removeAll()
       }
  }
+
+// MARK: - Activity Tab
+
+extension WMFAppViewController {
+    @objc func incrementActivityTabVisitCount() {
+        Task {
+            await WMFActivityTabDataController.shared.incrementActivityTabVisitCount()
+        }
+    }
+
+    @objc func generateActivityTab() -> WMFActivityTabViewController {
+        let onWikipediaiOS = WMFLocalizedString(
+            "activity-tab-hours-on-wikipedia-ios",
+            value: "ON WIKIPEDIA iOS",
+            comment: "Activity tab header for on Wikipedia iOS, entirely capitalized except for iOS, which maintains its proper capitalization"
+        )
+
+        let timeSpentReading = WMFLocalizedString(
+            "activity-tab-time-spent-reading",
+            value: "Time spent reading this week",
+            comment: "Subtitle to describe the amount of time read this week which will be displayed above with hours and minutes"
+        )
+
+        let activityTabDataController = WMFActivityTabDataController()
+
+        func usernamesReading(username: String) -> String {
+            let format = WMFLocalizedString(
+                "activity-tab-usernames-reading-title",
+                value: "%1$@'s reading",
+                comment: "Activity tab header, includes username and their reading, like User's reading where $1 is replaced with the username."
+            )
+            return String.localizedStringWithFormat(format, username)
+        }
+
+        let noUsernameReading = WMFLocalizedString("activity-tab-no-username-reading-title", value: "Your reading", comment: "Activity tab header, for when there is no username.")
+
+        func hoursMinutesRead(hours: Int, minutes: Int) -> String {
+            let hoursString = hours.description
+            let minutesString = minutes.description
+            let format = WMFLocalizedString(
+                "activity-tab-hours-minutes-read",
+                value: "%1$@h %2$@m",
+                comment: "Activity tab header, $1 is the amount of hours they spent reading, h is for the first letter of Hours, $2 is the amount of minutes they spent reading, m is for the first letter of Minutes."
+            )
+            return String.localizedStringWithFormat(format, hoursString, minutesString)
+        }
+
+        let articlesRead = WMFLocalizedString("activity-tab-articles-read", value: "Articles read this month", comment: "Title for module about articles read this month, displayed below the time spent reading this week")
+
+        let articlesReadGraph = WMFLocalizedString("activity-tab-articles-read-graph-label", value: "Articles", comment: "Activity tab articles read graph axis label")
+        let weekGraph = WMFLocalizedString("activity-tab-week-graph-label", value: "Week", comment: "Activity tab week graph axis label")
+
+        let topCategories = WMFLocalizedString("activity-tab-top-categories", value: "Top categories this month", comment: "Title for module about top categories this month")
+        let saved = WMFLocalizedString("activity-tab-saved", value: "Articles saved this month", comment: "Title for module about saved articles")
+
+        func remaining(amount: Int) -> String {
+            let format = WMFLocalizedString(
+                "activity-tab-remaining-articles",
+                value: "+%1$@",
+                comment: "Activity tab saved articles amount, where $1 is replaced with the amount of excess articles saved above 3."
+            )
+            return String.localizedStringWithFormat(format, String(amount))
+        }
+
+        let loggedOutTitle = WMFLocalizedString("activity-tab-logged-out-title", value: "See more reading and editing insights", comment: "Title for logged out users")
+        let loggedOutSubtitle = WMFLocalizedString("activity-tab-logged-out-subtitle", value: "Log in or create an account to view your activity on the Wikipedia app.", comment: "Subtitle for logged out users")
+        let openArticle = WMFLocalizedString("open-article", value: "Open article", comment: "Open article title")
+        let totalEditsAcrossProjects = WMFLocalizedString("activity-tab-total-edits", value: "Total edits across projects", comment: "Text for activity tab module about global edits")
+
+        let edited = WMFLocalizedString("edited-article", value: "Edited", comment: "Label for edited articles")
+        let emptyTitleLoggedIn = WMFLocalizedString("activity-tab-empty-title", value: "Nothing to show", comment: "Title on activity tab timeline empty state.")
+        let emptySubtitleLoggedIn = WMFLocalizedString("activity-tab-empty-subtitle", value: "Start reading and editing to build your history", comment: "Subtitle on activity tab timeline empty state.")
+        let emptyTitleLoggedOut = CommonStrings.emptyNoHistoryTitle
+        let emptySubtitleLoggedOut = CommonStrings.emptyNoHistorySubtitle
+        let yourImpact = WMFLocalizedString("activity-tab-your-impact", value: "Your impact", comment: "Title for editing section in activity tab.")
+
+        // Customize Screen
+        let customizeTimeSpentReading = WMFLocalizedString("activity-tab-customize-time-spent-reading", value: "Time spent reading", comment: "Title for time spent reading")
+        let customizeReadingInsights = WMFLocalizedString("activity-tab-customize-reading-insights", value: "Reading insights", comment: "Title for reading insights")
+        let customizeEditingInsights = WMFLocalizedString("activity-tab-customize-editing-insights", value: "Editing insights", comment: "Title for editing insights")
+        let customizeAllTimeImpact = WMFLocalizedString("activity-tab-customize-all-time-impact", value: "All time impact", comment: "Title for all time impact")
+        let customizeLastInAppDonation = WMFLocalizedString("activity-tab-customize-last-in-app-donation", value: "Last in app donation", comment: "Title for last in-app donation")
+        let customizeTimelineOfBehavior = WMFLocalizedString("activity-tab-customize-timeline-of-behavior", value: "Timeline of behavior", comment: "Title for timeline of behavior")
+        let customizeFooter = WMFLocalizedString("activity-tab-customize-footer", value: "Reading insights are based on your app languages in settings, and editing insights are limited to your primary app language.  Insights leverage local data, with the exception of edits which are public.", comment: "Footer for customize activity tab page.")
+
+        // Impact module
+        let allTimeImpactTitle = WMFLocalizedString("activity-tab-impact-all-time-title", value: "All time impact", comment: "Title for activity tab module about all time editing impact")
+        let totalEditsLabel = WMFLocalizedString("activity-tab-impact-total-edits-label", value: "total edits", comment: "Label in impact module for total edits count")
+
+
+        let bestStreakValue: (Int) -> String = { count in
+            let bestStreakFormat = WMFLocalizedString("activity-tab-impact-best-streak-format", value: "{{PLURAL:%1$d|%1$d day|%1$d days}}", comment: "Count in impact module for best editing streak in number of days. %1$d is replaced with number of days.")
+
+            return String.localizedStringWithFormat(bestStreakFormat, count)
+        }
+
+        let bestStreakLabel = WMFLocalizedString("activity-tab-impact-best-streak-label", value: "best streak", comment: "Label in impact module for best streak day count")
+
+        let thanksLabel = WMFLocalizedString("activity-tab-impact-thanks-label", value: "thanks", comment: "Label in impact module for thanks count")
+        let lastEditedLabel = WMFLocalizedString("activity-tab-impact-last-edited-label", value: "last edited", comment: "Label in impact module for last edited date")
+
+
+        let yourRecentActivityTitle = WMFLocalizedString("activity-tab-impact-recent-activity-title", value: "Your recent activity (last 30 days)", comment: "Title for activity tab module about your recent editing activity")
+        let editsLabel = WMFLocalizedString("activity-tab-impact-edits-label", value: "edits", comment: "Label in impact module for recent activity edit count")
+
+        let startEndDatesAccessibilityLabel: (String, String) -> String = { startDate, endDate in
+            let startEndDatesAccessibilityFormat = WMFLocalizedString("activity-tab-impact-recent-startend-accessibility", value: "From %1$@ to %2$@", comment: "Accessibility label in impact module for start / end date recent activity. %1$@ is replaced with start date, %2$@ is replaced with end date.")
+
+            return String.localizedStringWithFormat(startEndDatesAccessibilityFormat, startDate, endDate)
+        }
+
+        let viewsOnArticlesYouveEditedTitle = WMFLocalizedString("activity-tab-impact-views-title", value: "Views on articles you’ve edited", comment: "Title for activity tab module about views on articles user edited")
+
+        let lineGraphDay = WMFLocalizedString("activity-tab-impact-views-day", value: "Day", comment: "Accessibility label for activity tab views line graph, y-axis.")
+
+        let lineGraphViews = WMFLocalizedString("activity-tab-impact-views-views", value: "Views", comment: "Accessibility label for activity tab views line graph, x-axis.")
+
+
+        func customizeEmptyState() -> String {
+            // Fake link because it's needed
+            let openingLink = "<a href=\"www.wikipedia.org\">"
+            let closingLink = "</a>"
+            let format = WMFLocalizedString("activity-tab-customize-empty-state", value: "Activity modules are turned off. %1$@Switch them on%2$@ to see updates in this tab.", comment: "Empty state for customization on activity tab, $1 is the opening link, $2 is the closing.")
+            return String.localizedStringWithFormat(format, openingLink, closingLink)
+        }
+
+        var authdValue: LoginState = .loggedOut
+        if dataStore.authenticationManager.authStateIsPermanent {
+            authdValue = .loggedIn
+        } else if dataStore.authenticationManager.authStateIsTemporary {
+            authdValue = .temp
+        } else {
+            authdValue = .loggedOut
+        }
+
+        let viewModel = WMFActivityTabViewModel(
+            localizedStrings:
+                WMFActivityTabViewModel.LocalizedStrings(
+                    userNamesReading: usernamesReading(username:),
+                    noUsernameReading: noUsernameReading,
+                    totalHoursMinutesRead: hoursMinutesRead(hours:minutes:),
+                    onWikipediaiOS: onWikipediaiOS,
+                    timeSpentReading: timeSpentReading,
+                    totalArticlesRead: articlesRead,
+                    week: weekGraph,
+                    articlesRead: articlesReadGraph,
+                    topCategories: topCategories,
+                    articlesSavedTitle: saved,
+                    remaining: remaining(amount:),
+                    loggedOutTitle: loggedOutTitle,
+                    loggedOutSubtitle: loggedOutSubtitle,
+                    loggedOutPrimaryCTA: CommonStrings.joinLoginTitle,
+                    yourImpact: yourImpact,
+                    todayTitle: CommonStrings.todayTitle,
+                    yesterdayTitle: CommonStrings.yesterdayTitle,
+                    openArticle: openArticle,
+                    deleteAccessibilityLabel: CommonStrings.deleteActionTitle,
+                    totalEditsAcrossProjects: totalEditsAcrossProjects,
+                    read: CommonStrings.readString,
+                    edited: edited,
+                    saved: CommonStrings.shortSavedTitle,
+                    emptyViewTitleLoggedIn: emptyTitleLoggedIn,
+                    emptyViewSubtitleLoggedIn: emptySubtitleLoggedIn,
+                    emptyViewTitleLoggedOut: emptyTitleLoggedOut,
+                    emptyViewSubtitleLoggedOut: emptySubtitleLoggedOut,
+                    customizeTimeSpentReading: customizeTimeSpentReading,
+                    customizeReadingInsights: customizeReadingInsights,
+                    customizeEditingInsights: customizeEditingInsights,
+                    customizeAllTimeImpact: customizeAllTimeImpact,
+                    customizeLastInAppDonation: customizeLastInAppDonation,
+                    customizeTimelineOfBehavior: customizeTimelineOfBehavior,
+                    customizeFooter: customizeFooter,
+                    customizeEmptyState: customizeEmptyState(),
+                    viewChanges: WMFLocalizedString("view-changes", value: "View changes", comment: "View changes button title"),
+                    contributionsThisMonth: WMFLocalizedString("contributions-this-month", value: "Contributions this month", comment: "Title for section of contributions this month"),
+                    thisMonth: WMFLocalizedString("edits-this-month", value: "edits this month", comment: "Title for edits this month section"),
+                    lastMonth: WMFLocalizedString("edits-last-month", value: "edits last month", comment: "Title for edits last month section"),
+                    lookingForSomethingNew: WMFLocalizedString("looking-for-something-new", value: "Looking for something new to read?", comment: "Title prompting user to explore Wikipedia"),
+                    exploreWikipedia: WMFLocalizedString("explore-wikipedia", value: "Explore Wikipedia", comment: "Button title to explore Wikipedia"),
+                    zeroEditsToArticles: WMFLocalizedString("zero-edits-to-articles", value: "0 edits to articles recently", comment: "Message showing zero recent edits"),
+                    looksLikeYouHaventMadeAnEdit: WMFLocalizedString("looks-like-you-havent-made-an-edit", value: "Looks like you haven't made an edit this month. Extend free knowledge by editing topics that matter most to you.", comment: "Message encouraging user to make their first edit"),
+                    makeAnEdit: WMFLocalizedString("learn-about-editing", value: "Learn about editing", comment: "Button title to learn about editing"),
+                    viewsString: viewsString(views:),
+                    mostViewed: WMFLocalizedString("activity-tab-most-viewed", value: "Most viewed since your edit", comment: "Title for section for most viewed articles since an edit"),
+                    allTimeImpactTitle: allTimeImpactTitle,
+                    totalEditsLabel: totalEditsLabel,
+                    bestStreakValue: bestStreakValue,
+                    bestStreakLabel: bestStreakLabel,
+                    thanksLabel: thanksLabel,
+                    lastEditedLabel: lastEditedLabel,
+                    yourRecentActivityTitle: yourRecentActivityTitle,
+                    editsLabel: editsLabel,
+                    startEndDatesAccessibilityLabel: startEndDatesAccessibilityLabel,
+                    viewsOnArticlesYouveEditedTitle: viewsOnArticlesYouveEditedTitle,
+                    lineGraphDay: lineGraphDay,
+                    lineGraphViews: lineGraphViews,
+                    historyCalloutTitle: CommonStrings.historyMovedToSearchTitle,
+                    historyCalloutBodyLoggedIn: CommonStrings.historyMovedToSearchSubtitleLoggedIn,
+                    historyCalloutBodyLoggedOut: CommonStrings.historyMovedToSearchSubtitleLoggedOut,
+                    calloutCloseButtonAccesibilityHint: WMFLocalizedString("activity-tab-hitory-callout-close", value: "Close history notice card", comment: "Accesibility label for close button in callout about history moving to search")
+                ),
+                dataController: activityTabDataController,
+                authenticationState: authdValue)
+
+        viewModel.isExploreFeedOn = UserDefaults.standard.integer(forKey: "WMFDefaultTabTypeKey") == 0
+
+        let controller = WMFActivityTabViewController(
+            dataStore: dataStore,
+            theme: theme,
+            viewModel: viewModel,
+            dataController: activityTabDataController
+        )
+
+        func viewsString(views: Int) -> String {
+            let format = WMFLocalizedString("activity-tab-amount-article-views", value: "{{PLURAL:%1$d|%1$d view|%1$d views}}", comment: "$1 is the amount of views that an article has had since a user has edited it.")
+            return String.localizedStringWithFormat(format, views)
+        }
+
+        return controller
+    }
+
+    private var isLoggedIn: Int {
+        // 0 logged out
+        // 1 temp
+        // 2 logged in
+        if dataStore.authenticationManager.authStateIsTemporary {
+            return 1
+        } else if dataStore.authenticationManager.authStateIsPermanent {
+            return 2
+        }
+        return 0
+    }
+
+    @objc func logTabBarSelectionsForActivityTab(currentTabSelection: UIViewController, newTabSelection: UIViewController) {
+        guard let currentNavVC = currentTabSelection as? UINavigationController,
+              currentNavVC.viewControllers.count > 0,
+              let newTabNavVC = newTabSelection as? UINavigationController,
+              newTabNavVC.viewControllers.count > 0 else {
+            return
+        }
+
+        guard let currentVC = currentNavVC.viewControllers.last else {
+            return
+        }
+
+        let newVC = newTabNavVC.viewControllers[0]
+
+        var action: ActivityTabFunnel.Action? = nil
+        if newVC is WMFActivityTabViewController {
+            action = .activityNavClick
+        }
+
+        guard let action else { return }
+
+        if currentVC is ExploreViewController {
+            ActivityTabFunnel.shared.logTabBarSelected(from: .feed, action: action)
+        } else if currentVC is PlacesViewController {
+            ActivityTabFunnel.shared.logTabBarSelected(from: .places, action: action)
+        } else if currentVC is SavedViewController {
+            ActivityTabFunnel.shared.logTabBarSelected(from: .saved, action: action)
+        } else if currentVC is WMFActivityTabViewController {
+            ActivityTabFunnel.shared.logTabBarSelected(from: .activityTab, action: action)
+        } else if currentVC is SearchViewController {
+            ActivityTabFunnel.shared.logTabBarSelected(from: .search, action: action)
+        } else if currentVC is SettingsTabViewController {
+            ActivityTabFunnel.shared.logTabBarSelected(from: .settings, action: action)
+        } else if let article = currentVC as? ArticleViewController {
+            guard let title = article.articleURL.wmf_title?.denormalizedPageTitle else {
+                return
+            }
+
+            if title == "Main_Page" {
+                ActivityTabFunnel.shared.logTabBarSelected(from: .mainPage, action: action)
+            } else {
+                ActivityTabFunnel.shared.logTabBarSelected(from: .article, action: action)
+            }
+        }
+    }
+    
+    @objc func createTwoFactorViewControllerFromAutoLoginNotification(userInfo: [AnyHashable : Any], needsEmailToken: Bool) -> WMFTwoFactorPasswordViewController? {
+        guard let message = userInfo["mediaWikiMessage"] as? String else {
+            return nil
+        }
+        
+        let authInstrument = userInfo["authInstrument"] as? WMFTestKitchen.InstrumentImpl
+        
+        let vc = WMFTwoFactorPasswordViewController.wmf_initialViewControllerFromClassStoryboard()
+        vc?.mediaWikiMessage = message
+        vc?.authInstrument = authInstrument
+        
+        if needsEmailToken {
+            vc?.setDisplayModeToShortAlphanumeric()
+        }
+        
+        vc?.cancelAction = { [weak self] in
+            self?.dataStore.authenticationManager.logout(initiatedBy: .app)
+        }
+        
+        return vc
+    }
+
+    // MARK: - Settings
+
+    @objc func generateSettingsTab() -> SettingsTabViewController {
+        let dataController = WMFSettingsDataController.shared
+
+        let isExploreFeedOn = UserDefaults.standard.defaultTabType == .explore
+        let themeName = UserDefaults.standard.themeDisplayName
+        let username = dataStore.authenticationManager.authStatePermanentUsername
+        let tempUsername = dataStore.authenticationManager.authStateTemporaryUsername
+        let isTempAccount = WMFTempAccountDataController.shared.primaryWikiHasTempAccountsEnabled &&
+                            dataStore.authenticationManager.authStateIsTemporary
+        let language = dataStore.languageLinkController.appLanguage?.languageCode.uppercased() ?? String()
+
+        let localizedStrings = WMFSettingsViewModel.LocalizedStrings(
+            settingTitle: CommonStrings.settingsTitle,
+            doneButtonTitle: CommonStrings.doneTitle,
+            cancelButtonTitle: CommonStrings.cancelActionTitle,
+            accountTitle: CommonStrings.account,
+            logInTitle: CommonStrings.logIn,
+            myLanguagesTitle: CommonStrings.myLanguages,
+            searchTitle: CommonStrings.searchTitle,
+            exploreFeedTitle: CommonStrings.exploreFeedTitle,
+            homeFeedTitle: CommonStrings.homeFeedTitle,
+            onTitle: CommonStrings.onTitle,
+            offTitle: CommonStrings.offTitle,
+            yirTitle: CommonStrings.yirTitle,
+            pushNotificationsTitle: CommonStrings.pushNotifications,
+            readingpreferences: CommonStrings.readingPreferences,
+            articleSyncing: CommonStrings.settingsStorageAndSyncing,
+            databasePopulation: "Database population",
+            clearCacheTitle: CommonStrings.clearCachedDataSettings,
+            privacyHeader: CommonStrings.privacyTermsHeader,
+            privacyPolicyTitle: CommonStrings.privacyPolicyTitle,
+            termsOfUseTitle: CommonStrings.termsOfUseTitle,
+            rateTheAppTitle: CommonStrings.rateTheAppTitle,
+            helpTitle: CommonStrings.helpAndfeedbackTitle,
+            aboutTitle: CommonStrings.aboutTitle,
+            clearDonationHistoryTitle: CommonStrings.deleteDonationHistory,
+            safetyTitle: CommonStrings.legalAndSafety
+        )
+
+        let viewModel = WMFSettingsViewModel.__createSynchronously(
+            localizedStrings: localizedStrings,
+            username: username,
+            tempUsername: tempUsername,
+            isTempAccount: isTempAccount,
+            primaryLanguage: language,
+            exploreFeedStatus: isExploreFeedOn,
+            readingPreferenceTheme: themeName,
+            coordinatorDelegate: nil,
+            dataController: dataController
+        )
+
+        let controller = SettingsTabViewController(
+            viewModel: viewModel,
+            coordinatorDelegate: nil,
+            dataStore: dataStore,
+            theme: theme,
+            dataController: dataController
+        )
+
+        return controller
+    }
+}

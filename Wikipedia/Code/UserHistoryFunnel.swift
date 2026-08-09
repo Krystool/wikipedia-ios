@@ -1,3 +1,5 @@
+import WMFData
+
 private typealias ContentGroupKindAndLoggingCode = (kind: WMFContentGroupKind, loggingCode: String)
 
 @objc public final class UserHistoryFunnel: NSObject {
@@ -155,18 +157,22 @@ private typealias ContentGroupKindAndLoggingCode = (kind: WMFContentGroupKind, l
         self.sharedCache.saveCache(cache)
     }
 
+    func getOpenInSearchTab() -> Bool {
+        return WMFSettingsDataController.shared.openAppOnSearchTab()
+    }
+
     private func event(authorizationStatus: UNAuthorizationStatus?) -> Event {
         let userDefaults = UserDefaults.standard
         let theme = userDefaults.themeAnalyticsName
         let isFeedDisabled = userDefaults.defaultTabType != .explore
-        let appOpensOnSearchTab = userDefaults.wmf_openAppOnSearchTab
+        let appOpensOnSearchTab = getOpenInSearchTab()
         let inboxCount = try? dataStore.remoteNotificationsController.numberOfAllNotifications()
         let fontSize = userDefaults.wmf_articleFontSizeMultiplier().intValue
         let isSyncEnabled = dataStore.readingListsController.isSyncEnabled
         let isDefaultListEnabled = dataStore.readingListsController.isDefaultListEnabled
         let status = authorizationStatus?.getAuthorizationStatusString()
-        let yirEnabled = userDefaults.wmf_yirSettingToggleShouldShow ? userDefaults.wmf_yirSettingToggleIsEnabled : nil
-        
+        let yirDataController = try? WMFYearInReviewDataController()
+        let yirEnabled = yirDataController?.yearInReviewSettingsIsEnabled ?? false
         let readingListListCount = try? dataStore.viewContext.allReadingListsCount()
         let readingListItemCount = dataStore.savedPageList.numberOfItems()
 
@@ -216,11 +222,11 @@ private typealias ContentGroupKindAndLoggingCode = (kind: WMFContentGroupKind, l
             return
         }
         dataStore.notificationsController.notificationPermissionsStatus { [weak self] authorizationStatus in
-            
+
             guard let self = self else {
                 return
             }
-            
+
             DispatchQueue.main.async {
                 let event = self.event(authorizationStatus: authorizationStatus)
                 self.logEvent(event: event)

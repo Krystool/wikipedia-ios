@@ -37,17 +37,22 @@ final class PictureOfTheDayData {
 
     // MARK: Public
 
-    static func fetchPictureOfTheDayEntryData(usingCache: Bool = false, completion: @escaping (PictureOfTheDayEntry) -> Void) {
+    static func fetchPictureOfTheDayEntryData(
+        usingCache: Bool = false,
+        maxWidth: Int = 960,
+        targetSize: CGSize,
+        completion: @escaping (PictureOfTheDayEntry) -> Void
+    ) {
         let widgetController = WidgetController.shared
-        widgetController.fetchPictureOfTheDayContent(isSnapshot: usingCache) { result in
+        widgetController.fetchPictureOfTheDayContent(isSnapshot: usingCache, maxWidth: maxWidth) { result in
             let midnightUTCDate: Date = (Date() as NSDate).wmf_midnightUTCDateFromLocal ?? Date()
             let groupURL = WMFContentGroup.pictureOfTheDayContentGroupURL(forSiteURL: widgetController.featuredContentSiteURL, midnightUTCDate: midnightUTCDate)
 
-            if let pictureOfTheDay = try? result.get(), let imageData = pictureOfTheDay.originalImageSource?.data {
-                let image = UIImage(data: imageData)
+            if let pictureOfTheDay = try? result.get(),
+               let imageData = pictureOfTheDay.originalImageSource?.data,
+               let image = UIImage.downsampled(from: imageData, targetSize: targetSize) {
                 let description = pictureOfTheDay.description.text
                 let license = pictureOfTheDay.license.code
-
                 let entry = PictureOfTheDayEntry(date: Date(), kind: .entry, contentURL: groupURL, image: image, imageDescription: description, licenseCode: license)
                 completion(entry)
             } else {
@@ -77,12 +82,12 @@ struct PictureOfTheDayEntry: TimelineEntry {
     
     // MARK: Properties
     
-	let date: Date // for Timeline Entry
+    let date: Date // for Timeline Entry
     let kind: Kind
-	var contentURL: URL? = nil
-	var image: UIImage?
-	var imageDescription: String? = nil
-	var licenseCode: String? = nil // the system encodes this entry, avoiding bringing in the whole MWKLicense object and the Mantle dependency
+    var contentURL: URL? = nil
+    var image: UIImage?
+    var imageDescription: String? = nil
+    var licenseCode: String? = nil // the system encodes this entry, avoiding bringing in the whole MWKLicense object and the Mantle dependency
 
     // MARK: License Image Parsing
 
@@ -98,14 +103,6 @@ struct PictureOfTheDayEntry: TimelineEntry {
         }
 
         return licenseImages
-    }
-
-    // MARK: - Scale Entry Image
-
-    func scalingImageTo(targetSize: CGSize) -> PictureOfTheDayEntry {
-        var entry = self
-        entry.image = entry.image?.scaleImageToFit(targetSize: targetSize)
-        return entry
     }
 
 }
@@ -125,7 +122,9 @@ struct PictureOfTheDayProvider: TimelineProvider {
     }
     
     func getTimeline(in context: Context, completion: @escaping (Timeline<PictureOfTheDayEntry>) -> Void) {
-        PictureOfTheDayData.fetchPictureOfTheDayEntryData { entry in
+        let maxWidth = context.potdMaxImageWidth
+        let renderSize = context.potdRenderSize
+        PictureOfTheDayData.fetchPictureOfTheDayEntryData(maxWidth: maxWidth, targetSize: renderSize) { entry in
             let currentDate = Date()
             let nextUpdate: Date
 
@@ -136,14 +135,20 @@ struct PictureOfTheDayProvider: TimelineProvider {
                 nextUpdate = Calendar.current.date(byAdding: components, to: currentDate) ?? currentDate
             }
 
-            let timeline = Timeline(entries: [entry.scalingImageTo(targetSize: WidgetController.shared.potdTargetImageSize)], policy: .after(nextUpdate))
+            let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
             completion(timeline)
         }
     }
 
     func getSnapshot(in context: Context, completion: @escaping (PictureOfTheDayEntry) -> Void) {
-        PictureOfTheDayData.fetchPictureOfTheDayEntryData(usingCache: context.isPreview) { entry in
-            completion(entry.scalingImageTo(targetSize: WidgetController.shared.potdTargetImageSize))
+        let maxWidth = context.potdMaxImageWidth
+        let renderSize = context.potdRenderSize
+        PictureOfTheDayData.fetchPictureOfTheDayEntryData(
+            usingCache: context.isPreview,
+            maxWidth: maxWidth,
+            targetSize: renderSize
+        ) { entry in
+            completion(entry)
         }
     }
 
@@ -175,7 +180,7 @@ struct PictureOfTheDayView: View {
             }
         }
         .clearWidgetContainerBackground()
-        .widgetURL(entry.contentURL)
+        .widgetURL(wmf_urlWithWidgetSource(entry.contentURL, name: "picture_of_the_day"))
     }
 
     // MARK: View Components
@@ -183,7 +188,10 @@ struct PictureOfTheDayView: View {
     @ViewBuilder
     var image: some View {
         if let image = entry.image {
-            Image(uiImage: image).resizable().scaledToFill().clipped()
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .clipped()
         } else {
             Rectangle()
                 .foregroundColor(Color(.systemFill))
@@ -265,8 +273,18 @@ struct PictureOfTheDayWidget_Previews: PreviewProvider {
 }
 
 extension TimelineProviderContext {
-    var imageSize: CGSize {
-        let maxDisplayScale = environmentVariants.displayScale?.max() ?? 2
-        return CGSize(width: displaySize.width * maxDisplayScale, height: displaySize.height * maxDisplayScale)
+    var potdMaxImageWidth: Int {
+        switch family {
+        case .systemSmall:
+            return WidgetController.potdSmallImageWidth
+            // Large and medium need the same width
+        default:
+            return WidgetController.potdLargeImageWidth
+        }
+    }
+    
+    var potdRenderSize: CGSize {
+        let scale = environmentVariants.displayScale?.max() ?? 2
+        return CGSize(width: displaySize.width * scale, height: displaySize.height * scale)
     }
 }

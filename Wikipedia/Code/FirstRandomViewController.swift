@@ -5,14 +5,16 @@ class FirstRandomViewController: UIViewController, Themeable {
     private let siteURL: URL
     private let dataStore: MWKDataStore
     private let theme: Theme
+    private let source: ArticleSource
 
-    init(siteURL: URL, dataStore: MWKDataStore, theme: Theme) {
+    init(siteURL: URL, dataStore: MWKDataStore, theme: Theme, source: ArticleSource = .undefined) {
         self.siteURL = siteURL
         self.dataStore = dataStore
         self.theme = theme
+        self.source = source
         
         super.init(nibName: nil, bundle: nil)
-        self.hidesBottomBarWhenPushed = true
+        configureHidesBottomBarWhenPushed()
     }
     
     required init?(coder: NSCoder) {
@@ -35,12 +37,12 @@ class FirstRandomViewController: UIViewController, Themeable {
                 guard let self else { return }
                 
                 if error != nil || articleURL == nil {
-                    WMFAlertManager.sharedInstance.showErrorAlert((error ?? Fetcher.unexpectedResponseError), sticky: false, dismissPreviousAlerts: false)
+                    WMFToastManager.sharedInstance.showErrorAlert((error ?? Fetcher.unexpectedResponseError), sticky: false, dismissPreviousToasts: false)
                     return
                 }
                 
                 if let navigationController = self.navigationController {
-                    let randomCoordinator = RandomArticleCoordinator(navigationController: navigationController, articleURL: articleURL, siteURL: self.siteURL, dataStore: self.dataStore, theme: self.theme, source: .undefined, animated: false, replaceLastViewControllerInNavStack: true)
+                    let randomCoordinator = RandomArticleCoordinator(navigationController: navigationController, articleURL: articleURL, siteURL: self.siteURL, dataStore: self.dataStore, theme: self.theme, source: self.source, animated: false, replaceLastViewControllerInNavStack: true)
                     randomCoordinator.start()
                 }
                 

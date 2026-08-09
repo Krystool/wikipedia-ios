@@ -1,12 +1,15 @@
 import CoreData
 
-final class YearInReviewTopReadArticleSlideDataController: YearInReviewSlideDataControllerProtocol {
+// @unchecked: `isEvaluated` is mutable, but instances are confined to the sequential
+// populate flow in WMFYearInReviewDataController (mutated in a loop, then read in a
+// single Core Data perform closure) — see YearInReviewSlideDataControllerProtocol.
+final class YearInReviewTopReadArticleSlideDataController: YearInReviewSlideDataControllerProtocol, @unchecked Sendable {
 
     let id = WMFYearInReviewPersonalizedSlideID.topArticles.rawValue
     let year: Int
     var isEvaluated: Bool = false
-    static var containsPersonalizedNetworkData = false
-    static var shouldFreeze = true
+    static let containsPersonalizedNetworkData = false
+    static let shouldFreeze = true
     
     private var articles: [String]?
 
@@ -28,6 +31,7 @@ final class YearInReviewTopReadArticleSlideDataController: YearInReviewSlideData
         }
         if let pageViewCounts = try? await dataController.fetchPageViewCounts(startDate: startDate, endDate: endDate) {
             let top5 = pageViewCounts
+                .filter { $0.count > 1 }
                 .sorted { $0.count > $1.count }
                 .prefix(5).map { item in
                     return item.page.title.replacingOccurrences(of: "_", with: " ")

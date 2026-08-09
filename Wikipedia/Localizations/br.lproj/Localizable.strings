@@ -26,8 +26,6 @@
 "about-repositories-app-source-license" = "Ar c'hod mammennoù a c'haller kaout dindan $1.";
 "about-repositories-app-source-license-mit" = "Aotre-implijout MIT";
 "about-send-feedback" = "Kas un ali diwar-benn an arload";
-"about-testers" = "Prouaderioù";
-"about-testers-details" = "AQ prouet gant $1";
 "about-title" = "Diwar-benn";
 "about-translators" = "Troerien";
 "about-translators-details" = "Troet eo bet an arload-mañ gant troerien a-youl vat e $1";
@@ -171,7 +169,6 @@
 "edit-menu-item" = "Kemmañ";
 "edit-minor-text" = "Ur c'hemm dister eo hemañ";
 "edit-notices" = "Kemennoù aozañ";
-"edit-published" = "Kemmoù embannet";
 "edit-summary-choice-added-image" = "Skeudenn ouzhpennet";
 "edit-summary-choice-fixed-grammar" = "Fazi yezhadur reizhet";
 "edit-summary-choice-fixed-typos" = "Vi-koukoug reizhet";
@@ -278,12 +275,10 @@
 "forgot-password-instructions" = "Leuniañ unan eus ar maeziennoù amañ dindan evit degemer ar c'hemennadurioù evit adderaouekaat ar ger-tremen dre bostel.";
 "forgot-password-title" = "Adderaouekaat ar ger-tremen";
 "forgot-password-username-or-email-title" = "Pe";
-"history-clear-all" = "Diverkañ";
 "history-clear-confirmation-heading" = "Ha sur eo ho peus c'hoant da lemel ho holl elfennoù nevez ?";
 "history-clear-delete-all" = "Ya, lemel pep tra";
 "history-title" = "Istor";
 "home-button-explore-accessibility-label" = "Wikipedia, distreiñ da Ergerzhiñ";
-"home-button-history-accessibility-label" = "Wikipedia, distreiñ da Istor";
 "home-button-saved-accessibility-label" = "Wikipedia, distreiñ da Enrollañ";
 "home-more-like-footer" = "Muioc'h evel $1";
 "home-nearby-footer" = "Muioc’h a zanvez eus lec’hioù tost ouzoc’h";
@@ -361,8 +356,10 @@
 "more-languages-tooltip-title" = "Ouzhpennañ yezhoù";
 "more-menu" = "Muioc'h";
 "navbar-title-mode-edit-wikitext-preview" = "Rakwelet";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 troad";
 "nearby-distance-label-km" = "$1 km";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 metr";
 "nearby-distance-label-miles" = "$1 mil saoz";
 "new-password-instructions" = "Kevreet oc'h bet gant ur ger-tremen dibad.\nEvit echuiñ kevreañ e rankit lakaat ur ger-tremen nevez amañ :";
@@ -370,7 +367,6 @@
 "next-action-title" = "War-lerc'h";
 "no-email-account-alert" = "Kendalc'hit, mar plij da gefluniañ ur gemennadenn en hoc'h ardivink ha klaskit en-dro.";
 "no-internet-connection" = "Kevreadur ebet ouzh ar Genrouedad";
-"no-internet-connection-article-reload-button" = "Distreiñ d'an doare diwezhañ enrollet";
 "not-now-title" = "Ket bremañ";
 "notifications-center-agent-description-from-format" = "Digant $1";
 "notifications-center-alert" = "Kemennoù-diwall";
@@ -530,10 +526,6 @@
 "relative-date-seconds-abbreviated" = "$1s";
 "relative-date-seconds-ago-abbreviated" = "$1s zo";
 "relative-date-years-ago" = "{{PLURAL:$1|0=Er bloaz-mañ|$1 bloaz zo}}";
-"replace-infolabel-method-replace" = "Erlec'hiañ";
-"replace-infolabel-method-replace-all" = "Erlec'hiañ pep tra";
-"replace-textfield-accessibility" = "Erlec'hiañ";
-"replace-textfield-placeholder" = "Erlec'hiañ gant...";
 "return-button-title" = "Distreiñ";
 "return-to-article" = "Distreiñ d'ar pennad";
 "reverted-edit-title" = "Kemm distaolet";
@@ -567,16 +559,8 @@
 "settings-my-languages" = "Ma yezhoù";
 "settings-notifications" = "Kemennoù bountet";
 "settings-notifications-echo-failure-try-again" = "Klask en-dro";
-"settings-notifications-info" = "Gant ar bounter kemennadennoù e c'hallit bezañ kelaouet diwar-benn ar pennadoù diouzh ar c'hiz pe ar re lennet ar muiañ. Pep tra pourvezet en ur zoujañ da brevezded ha da nevezinti ar roadennoù.";
-"settings-notifications-learn-more" = "Evit gouzout hiroc'h diwar-benn ar c'hemennoù";
-"settings-notifications-push-notifications" = "Kemennoù kaset";
-"settings-notifications-system-turn-on" = "Gweredekaat ar c'hemennadennoù.";
-"settings-notifications-trending" = "Berzh darvoudoù ar mare";
 "settings-primary-language" = "Pennañ";
 "settings-primary-language-details" = "Ar yezh kentañ er roll-mañ eo ar yezh implijet en arload.";
-"settings-storage-and-syncing-erase-saved-articles-alert-title" = "Lemel pep pennad enrollet?";
-"settings-storage-and-syncing-erase-saved-articles-button-title" = "Diverkañ";
-"settings-storage-and-syncing-erase-saved-articles-title" = "Lemel ar pennadoù enrollet";
 "settings-title" = "Arventennoù";
 "share-article-name-on-wikipedia" = "\"$1\" war Wikipedia:";
 "share-default-format" = "“$1” eus “$2”: $3";
@@ -687,9 +671,6 @@
 "welcome-intro-free-encyclopedia-more-about" = "Diwar-benn Wikipedia";
 "welcome-intro-free-encyclopedia-title" = "An Holloueziadur digor";
 "welcome-languages-add-button" = "Ouzhpennañ ur yezh all";
-"welcome-notifications-tell-me-more-creation" = "Krouet ha pourchaset eo ar c'hemennadennoù war ho penveg gant an arload. Ne zeuont ket servijerioù diavaez.";
-"welcome-notifications-tell-me-more-storage" = "Enrollañ a reomp ar penndibaboù war ar benveg, n'int ket diazezet war titouroù personel pe hoc'h obererezh.";
-"welcome-notifications-tell-me-more-title" = "Gouzout hiroc'h diwar-benn ar c'hemennadennoù";
 "wikitext-preview-changes" = "Adtapout an alberz eus ho kemmoù";
 "wikitext-preview-link-external-preview-title" = "Liamm diavaez";
 "wikitext-preview-link-preview-title" = "Rakwel al liamm";
@@ -699,5 +680,4 @@
 "wikitext-upload-result-unknown" = "N'haller ket termenañ disoc'h pellgargañ ar wikitestenn.";
 "wikitext-upload-save" = "Oc'h embann...";
 "wikitext-upload-save-anonymously-warning" = "Ar c'hemmoù a vo roet da chomlec'h IP hoc'h ardivink. M'ho peus $1 ho po muioc'h a zegasadennoù e kuzhut.";
-"wikitext-upload-save-sign-in" = "Kevreañ";
 "wikitext-upload-save-terms-name" = "Termenoù implijout";

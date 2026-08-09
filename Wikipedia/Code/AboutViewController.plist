@@ -8,8 +8,6 @@
 		<string>https://creativecommons.org/licenses/by-sa/4.0/</string>
 		<key>mit</key>
 		<string>https://raw.githubusercontent.com/wikimedia/wikipedia-ios/main/LICENSE.txt</string>
-		<key>tsg</key>
-		<string>https://tsgteam.org</string>
 		<key>feedback</key>
 		<string>mailto:ios-support@wikimedia.org?subject=Feedback:$1</string>
 		<key>twn</key>
@@ -46,7 +44,7 @@
 		<string>Boris Dušek</string>
 		<string>brett ohland</string>
 		<string>Brian Gerstle</string>
-		<string>Brion Vibber</string>
+		<string>Brooke Vibber</string>
 		<string>Carolyn Li-Madeo</string>
 		<string>Chelsy Xie</string>
 		<string>Christian Bilodeau</string>
@@ -131,6 +129,7 @@
 		<string>Steve Peak</string>
 		<string>Steven Schobert</string>
 		<string>Sunil Sharma</string>
+		<string>Taís Lessa</string>
 		<string>Thomas PT</string>
 		<string>Tiago Martinho</string>
 		<string>Tim Johnsen</string>

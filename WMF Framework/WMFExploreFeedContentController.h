@@ -2,6 +2,7 @@
 #import <UIKit/UIKit.h>
 
 @class MWKDataStore;
+@protocol WMFBackgroundFetcher;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -13,7 +14,7 @@ extern NSString *const WMFNewExploreFeedPreferencesWereRejectedNotification;
 
 extern const NSInteger WMFExploreFeedMaximumNumberOfDays;
 
-@interface WMFExploreFeedContentController : NSObject
+@interface WMFExploreFeedContentController : NSObject <WMFBackgroundFetcher>
 
 - (instancetype)initWithDataStore:(MWKDataStore *)dataStore;
 - (instancetype)init NS_UNAVAILABLE;
@@ -116,6 +117,12 @@ extern const NSInteger WMFExploreFeedMaximumNumberOfDays;
 - (void)rejectNewExploreFeedPreferences;
 
 - (void)dismissCollapsedContentGroups;
+
+/// Updates the content group preview for the daily game matching the given projectID and date.
+/// Called when a Which Came First session answer is submitted.
+- (void)updateDailyGameContentGroupPreviewForProjectID:(NSString *)projectID date:(NSString *)date;
+
+- (void)resetDailyGameContentGroups;
 
 #if DEBUG
 - (void)debugChaos;

@@ -1,16 +1,27 @@
 import XCTest
+import WMFDataTestSupport
 @testable import WMFComponents
 @testable import WMFData
 import WMFDataMocks
 
 final class WMFWatchlistFilterViewModelTests: XCTestCase {
 
-    override func setUpWithError() throws {
+    private let fixture = WMFDataTestFixture()
+
+    override func setUp() async throws {
+        try await super.setUp()
+        await fixture.setUp()
         WMFDataEnvironment.current.appData = WMFAppData(appLanguages:[
             enLanguage,
             esLanguage
         ])
         WMFDataEnvironment.current.userDefaultsStore = WMFMockKeyValueStore()
+        await fixture.resetWMFDataTestState()
+    }
+
+    override func tearDown() async throws {
+        await fixture.tearDown()
+        try await super.tearDown()
     }
     
     var enLanguage: WMFLanguage {
@@ -304,7 +315,6 @@ private extension WMFWatchlistFilterViewModel.LocalizedStrings {
                     WMFProject.wikipedia(WMFLanguage(languageCode: "es", languageVariantCode: nil)): "Spanish Wikipedia"
                  ]
          return WMFWatchlistFilterViewModel.LocalizedStrings(title: "Filter",
-                                         doneTitle: "Done",
                                          localizedProjectNames: localizedProjectNames,
                                          wikimediaProjectsHeader: "Wikimedia Projects",
                                          wikipediasHeader: "Wikipedias",

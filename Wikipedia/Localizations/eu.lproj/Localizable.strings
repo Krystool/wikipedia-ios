@@ -31,8 +31,6 @@
 "about-repositories-app-source-license" = "Iturri kodea erabilgarri dago $1(r)en babespean.";
 "about-repositories-app-source-license-mit" = "MIT Lizentzia";
 "about-send-feedback" = "Aplikazioari buruzko feedbacka eman";
-"about-testers" = "Aztertzaileak";
-"about-testers-details" = "QA $1(e)k aztertu du";
 "about-title" = "Honi buruz";
 "about-translators" = "Itzultzaileak";
 "about-translators-details" = "$1(e)n boluntarioek itzulita";
@@ -223,12 +221,10 @@
 "forgot-password-instructions" = "Hurrengo hutsuneak bete, emailez jasotzeko pasahitza berrezartzeko jarraibideak";
 "forgot-password-title" = "Pasahitza berrezarri";
 "forgot-password-username-or-email-title" = "Edo";
-"history-clear-all" = "Garbitu";
 "history-clear-confirmation-heading" = "Ziur al zaude zure azken elementu guztiak ezabatu nahi dituzula?";
 "history-clear-delete-all" = "Bai, dena ezabatu";
 "history-title" = "Historia";
 "home-button-explore-accessibility-label" = "Wikipedia, Arakatzailera itzuli";
-"home-button-history-accessibility-label" = "Wikipedia, Historiara itzuli";
 "home-button-saved-accessibility-label" = "Wikipedia, Biltegira itzuli";
 "home-more-like-footer" = "$1 bezalako artikulu gehiago";
 "home-nearby-footer" = "Zure kokapenetik gertuko leku gehiago";
@@ -269,8 +265,10 @@
 "more-languages-tooltip-title" = "Hizkuntzak gehitu";
 "move-articles-to-reading-list" = "Mugitu {{PLURAL:$1|artikulu bat|$1 artikulu}} irakurketa zerrendara";
 "navbar-title-mode-edit-wikitext-preview" = "Aurrebista";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 oin";
 "nearby-distance-label-km" = "$1 km";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 m";
 "nearby-distance-label-miles" = "$1 milia";
 "new-password-instructions" = "Aldi baterako pasahitza erabiliz hasi duzu saioa. \nSaio hasten amaitzeko, pasahitz berria ezarri beharko duzu hemen.";
@@ -345,8 +343,6 @@
 "reading-list-generic-error" = "Espero gabeko errorea gertatu da zure irakurketa zerrendak eguneratzen ari ziren bitartean.";
 "reading-list-keep-button-title" = "Bai, mantendu itzazu artikuluak gailuan";
 "reading-list-keep-subtitle" = "Zure Wikipedia kontuan sinkronizatutako artikuluak daude. Saioa itxi eta gero, gailuan mantendu nahiko zenituzke?";
-"reading-list-keep-sync-disabled-additional-subtitle" = "Sinkronizazioa itzaltzeak artikulu hauek ezabatuko ditu zure kontutik. Zure gailutik ezabatzen badituzu, ezingo dituzu berreskuratu gerora sinkronizazioa berriro piztuz.";
-"reading-list-keep-sync-disabled-remove-article-button-title" = "Ez, kendu artikuluak nire gailutik eta nire Wikipedia kontutik";
 "reading-list-keep-title" = "Gordetako artikuluak gailuan mantendu nahi dituzu?";
 "reading-list-limit-hit-for-unsorted-articles-button-title" = "Sailkatu artikuluak";
 "reading-list-limit-hit-for-unsorted-articles-subtitle" = "Sailkatu gabeko 5000 artikuluren muga dago. Mesedez, antola itzazu jadanik existitzen diren artikuluak zerrendatan sailkatu gabeko artikuluak sinkronizatu ahal izateko.";
@@ -418,7 +414,6 @@
 "search-button-accessibility-label" = "Bilatu Wikipedian";
 "search-clear-title" = "Garbitu";
 "search-field-placeholder-text" = "Bilatu Wikipedian";
-"search-reading-list-placeholder-text" = "Irakurketa zerrenda bilatu";
 "search-recent-clear-confirmation-heading" = "Ezabatu azken bilaketa guztiak?";
 "search-recent-clear-confirmation-sub-heading" = "Ekintza hau ezin da desegin!";
 "search-recent-clear-delete-all" = "Denak ezabatu";
@@ -437,21 +432,11 @@
 "settings-language-bar" = "Bilaketan hizkuntzak erakutsi";
 "settings-my-languages" = "Nire hizkuntzak";
 "settings-notifications" = "Jakinarazpenak";
-"settings-notifications-info" = "Jakinarazpenak piztuz, top artikuluei buruzko alertak jaso ditzakezu. Dena eskainiko da betiere pribatutasuna eta minutuko datuak errespetatuz.";
-"settings-notifications-learn-more" = "Jakinarazpenei buruzko gehiago ikasi";
-"settings-notifications-push-notifications" = "Jakinarazpenak piztu";
-"settings-notifications-system-turn-on" = "Jakinarazpenak piztu";
-"settings-notifications-trending" = "Modan dauden gaurko gertakariak";
 "settings-primary-language" = "Primarioa";
 "settings-primary-language-details" = "Zerrenda honetan erabilitako lehenengo hizkuntza aplikazio honetarako ere erabiltzen den hizkuntza da.";
 "settings-search-open-app-on-search" = "Zabaldu aplikazioa Bilaketa leihoan";
 "settings-storage-and-syncing-enable-sync-footer-text" = "Baimendu Wikimediari zure gordetako artikuluak eta irakurketa-zerrendak zure kontuko lehentasunetan gordetzen saioa sinkronizatzeko hasten duzunean.";
 "settings-storage-and-syncing-enable-sync-title" = "Gordetako artikuluak eta zerrendak sinkronizatu";
-"settings-storage-and-syncing-erase-saved-articles-alert-message" = "Zure gordetako artikuluak ezabatzean zure erabiltzaile-kontutik ere ezabatuko dira, bai sinkronizatzea piztuta edukita, zein gailu honetatik. Ezingo duzu ezer berreskuratu.";
-"settings-storage-and-syncing-erase-saved-articles-alert-title" = "Gordetako artikulu guztiak ezabatu?";
-"settings-storage-and-syncing-erase-saved-articles-button-title" = "Ezabatu";
-"settings-storage-and-syncing-erase-saved-articles-footer-text" = "Zure gordetako artikuluak ezabatzean zure erabiltzaile-kontutik ere ezabatuko dira, bai sinkronizatzea piztuta edukita, zein gailu honetatik.\n\nGordetako artikuluak ezabatzea dohakoa izango da $1 espaziotik gora.";
-"settings-storage-and-syncing-erase-saved-articles-title" = "Gordetako artikulu guztiak ezabatu";
 "settings-storage-and-syncing-full-sync" = "Zure irakurketa zerrendak atzeko planoan sinkronizatuko dira";
 "settings-storage-and-syncing-server-sync-footer-text" = "Zure sinkronizatutako artikulu eta irakurketa-zerrenden eguneratzea eskatu";
 "settings-storage-and-syncing-server-sync-title" = "Eguneratu sinkronizatutako irakurketa zerrendak";
@@ -506,9 +491,6 @@
 "welcome-languages-add-or-edit-button" = "Gehitu edo aldatu hizkuntza hobetsia";
 "welcome-languages-description" = "Hurrengo hizkuntzak aurkitu ditugu zure gailuan:";
 "welcome-languages-search-title" = "Bilatu 300 hizkuntza baino gehiagotan";
-"welcome-notifications-tell-me-more-creation" = "Jakinarazpenak zure gailuan sortu eta bidali dira aplikazioak, ez gure zerbitzarietan (edo beste hirugarren batean).";
-"welcome-notifications-tell-me-more-storage" = "Jakinarazpen lehentesiak gailuan biltzen dira, eta ez dira oinarritzen informazio edo jarduera pertsonalean.";
-"welcome-notifications-tell-me-more-title" = "Jakinarazpenei buruzko informazio gehiago";
 "wikitext-preview-changes" = "Zure aldaketen aurrebista eskuratzen...";
 "wikitext-preview-link-preview-description" = "Estekak '$1'(e)ra eramaten zaitu";
 "wikitext-preview-link-preview-title" = "Estekaren aurrebista";
@@ -517,5 +499,4 @@
 "wikitext-upload-result-unknown" = "Ezin da wikitext kargaren emaitza zehaztu.";
 "wikitext-upload-save" = "Argitaratzen...";
 "wikitext-upload-save-anonymously-warning" = "Aldaketak zure gailuko IP helbideari egotziko zaizkio. Zuk $1 egiten baduzu, pribautasun gehiago edukiko duzu.";
-"wikitext-upload-save-sign-in" = "Hasi saioa";
 "wikitext-upload-save-terms-name" = "Erabilera Baldintzak";

@@ -15,7 +15,7 @@ NSString *const WMFViewContextDidSave = @"WMFViewContextDidSave";
 NSString *const WMFViewContextDidResetNotification = @"WMFViewContextDidResetNotification";
 
 NSString *const WMFLibraryVersionKey = @"WMFLibraryVersion";
-static const NSInteger WMFCurrentLibraryVersion = 19;
+static const NSInteger WMFCurrentLibraryVersion = 20;
 
 NSString *const WMFCoreDataSynchronizerInfoFileName = @"Wikipedia.info";
 
@@ -200,42 +200,46 @@ NSString *const WMFCacheContextCrossProcessNotificiationChannelNamePrefix = @"or
 }
 
 - (void)setupCoreDataStackWithContainerURL:(NSURL *)containerURL completion:(nullable dispatch_block_t)completion {
-    NSString *modelName = @"Wikipedia";
-    NSURL *modelURL = [[NSBundle wmf] URLForResource:modelName withExtension:@"momd"];
-    NSManagedObjectModel *model = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
-    NSString *coreDataDBName = @"Wikipedia.sqlite";
+    // Move heavy model loading and migration to background queue
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSString *modelName = @"Wikipedia";
+        NSURL *modelURL = [[NSBundle wmf] URLForResource:modelName withExtension:@"momd"];
+        NSManagedObjectModel *model = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
+        NSString *coreDataDBName = @"Wikipedia.sqlite";
 
-    NSPersistentContainer *container = [[NSPersistentContainer alloc] initWithName:modelName managedObjectModel:model];
-    NSURL *coreDataDBURL = [containerURL URLByAppendingPathComponent:coreDataDBName isDirectory:NO];
-    NSPersistentStoreDescription *description = [[NSPersistentStoreDescription alloc] initWithURL:coreDataDBURL];
-    [description setOption:@YES forKey:NSMigratePersistentStoresAutomaticallyOption];
-    [description setOption:@YES forKey:NSInferMappingModelAutomaticallyOption];
-    description.shouldAddStoreAsynchronously = YES;
-    container.persistentStoreDescriptions = @[description];
+        NSPersistentContainer *container = [[NSPersistentContainer alloc] initWithName:modelName managedObjectModel:model];
+        NSURL *coreDataDBURL = [containerURL URLByAppendingPathComponent:coreDataDBName isDirectory:NO];
+        NSPersistentStoreDescription *description = [[NSPersistentStoreDescription alloc] initWithURL:coreDataDBURL];
+        [description setOption:@YES forKey:NSMigratePersistentStoresAutomaticallyOption];
+        [description setOption:@YES forKey:NSInferMappingModelAutomaticallyOption];
+        description.shouldAddStoreAsynchronously = YES;
+        container.persistentStoreDescriptions = @[description];
 
-    [container loadPersistentStoresWithCompletionHandler:^(NSPersistentStoreDescription *_Nonnull description, NSError *_Nullable error) {
-        if (error) {
-            // TODO: Metrics
-            DDLogError(@"Error adding persistent store: %@", error);
-            if (completion) {
-                completion();
+        [container loadPersistentStoresWithCompletionHandler:^(NSPersistentStoreDescription *_Nonnull description, NSError *_Nullable error) {
+            if (error) {
+                DDLogError(@"Error adding persistent store: %@", error);
+                if (completion) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        completion();
+                    });
+                }
+                return;
             }
-            return;
-        }
 
-        dispatch_async(dispatch_get_main_queue(), ^(void) {
-            self.persistentContainer = container;
-            self.viewContext = container.viewContext;
-            self.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy;
-            self.viewContext.automaticallyMergesChangesFromParent = YES;
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(managedObjectContextDidSave:) name:NSManagedObjectContextDidSaveNotification object:self.viewContext];
-            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(viewContextDidChange:) name:NSManagedObjectContextObjectsDidChangeNotification object:self.viewContext];
+            dispatch_async(dispatch_get_main_queue(), ^(void) {
+                self.persistentContainer = container;
+                self.viewContext = container.viewContext;
+                self.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy;
+                self.viewContext.automaticallyMergesChangesFromParent = YES;
+                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(managedObjectContextDidSave:) name:NSManagedObjectContextDidSaveNotification object:self.viewContext];
+                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(viewContextDidChange:) name:NSManagedObjectContextObjectsDidChangeNotification object:self.viewContext];
 
-            if (completion) {
-                completion();
-            }
-        });
-    }];
+                if (completion) {
+                    completion();
+                }
+            });
+        }];
+    });
 }
 
 - (void)viewContextDidChange:(NSNotification *)note {
@@ -262,6 +266,23 @@ NSString *const WMFCacheContextCrossProcessNotificiationChannelNamePrefix = @"or
                     [nc postNotificationName:WMFArticleDeletedNotification object:[note object] userInfo:@{WMFArticleDeletedNotificationUserInfoArticleKeyKey: articleKey}];
                 } else {
                     [nc postNotificationName:WMFArticleUpdatedNotification object:article];
+                }
+
+                if ([key isEqualToString:NSUpdatedObjectsKey] &&
+                    article.hasChangedValuesForCurrentEventThatAffectSavedState) {
+
+                    if (article.savedDate != nil && !article.isSavedMigrated) {
+                        DDLogInfo(@"[SavedMigration] Incremental hook firing for key=%@ savedDate=%@", article.key, article.savedDate);
+                        [WMFArticleSavedStateMigrationManager.shared migrateIncrementalObjC];
+                    }
+
+                    if (article.savedDate == nil && article.isSavedMigrated) {
+                        if (articleURL != nil) {
+                            DDLogInfo(@"[SavedMigration] Revert hook firing for key=%@ (unsave)", article.key);
+                            NSArray<NSURL *> *urls = @[articleURL];
+                            [WMFArticleSavedStateMigrationManager.shared removeFromSavedWithURLs:urls];
+                        }
+                    }
                 }
             }
         }
@@ -463,9 +484,6 @@ NSString *const WMFCacheContextCrossProcessNotificiationChannelNamePrefix = @"or
 
     if (currentLibraryVersion < 14) {
         [self.remoteNotificationsController deleteLegacyDatabaseFilesAndReturnError:nil];
-        NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-        [moc removeAllContentGroupsOfKind:WMFContentGroupKindNotification];
-        userDefaults.wmf_shouldShowNotificationsExploreFeedCard = YES;
         [NSHTTPCookieStorage migrateCookiesToSharedStorage];
         [moc wmf_setValue:@(14) forKey:WMFLibraryVersionKey];
         if ([moc hasChanges] && ![moc save:&migrationError]) {
@@ -509,11 +527,21 @@ NSString *const WMFCacheContextCrossProcessNotificiationChannelNamePrefix = @"or
             return;
         }
     }
-    
+
     if (currentLibraryVersion < 19) {
         [self importViewedArticlesIntoWMFDataWithDataStoreMOC:moc];
         [moc wmf_setValue:@(19) forKey:WMFLibraryVersionKey];
         if ([moc hasChanges] && ![moc save:nil]) {
+            DDLogError(@"Error saving during migration: %@", migrationError);
+            return;
+        }
+    }
+
+    if (currentLibraryVersion < 20) {
+        [self.feedContentController toggleContentGroupOfKind:WMFContentGroupKindDailyGame isOn:YES updateFeed:NO];
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"needs-daily-game-feed-refresh"];
+        [moc wmf_setValue:@(20) forKey:WMFLibraryVersionKey];
+        if ([moc hasChanges] && ![moc save:&migrationError]) {
             DDLogError(@"Error saving during migration: %@", migrationError);
             return;
         }
@@ -854,7 +882,7 @@ NSString *const WMFCacheContextCrossProcessNotificiationChannelNamePrefix = @"or
 
 #pragma mark - Remote Configuration
 
-- (void)updateLocalConfigurationFromRemoteConfigurationWithCompletion:(nullable void (^)(NSError *nullable))completion {
+- (void)updateLocalConfigurationFromRemoteConfigurationWithCompletion:(nullable void (^)(NSError *_Nullable))completion {
     void (^combinedCompletion)(NSError *) = ^(NSError *error) {
         if (completion) {
             completion(error);
@@ -890,16 +918,16 @@ NSString *const WMFCacheContextCrossProcessNotificiationChannelNamePrefix = @"or
                          }];
     // Remote Feature config
     [taskGroup enter];
-    [[WMFDeveloperSettingsDataController shared] fetchFeatureConfigWithCompletion:^(NSError * _Nullable error) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if (error) {
-                    updateError = error;
-                    [taskGroup leave];
-                    return;
-                }
-                
+    [[WMFDeveloperSettingsDataController shared] fetchFeatureConfigWithCompletion:^(NSError *_Nullable error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (error) {
+                updateError = error;
                 [taskGroup leave];
-            });
+                return;
+            }
+
+            [taskGroup leave];
+        });
     }];
 
     [taskGroup waitInBackgroundWithCompletion:^{
@@ -924,6 +952,7 @@ NSString *const WMFCacheContextCrossProcessNotificiationChannelNamePrefix = @"or
 
 #if DEBUG
 - (NSManagedObjectContext *)viewContext {
+    NSAssert(_viewContext != nil, @"⚠️ viewContext accessed before Core Data setup completed!");
     NSAssert([NSThread isMainThread], @"View context must only be accessed on the main thread");
     return _viewContext;
 }
@@ -1015,6 +1044,8 @@ NSString *const WMFCacheContextCrossProcessNotificiationChannelNamePrefix = @"or
 
 - (void)authenticationManagerDidReset {
     [self clearMemoryCache];
+    // A stale pending remote teardown must not survive logout (T431140)
+    [self.readingListsController clearNeedsRemoteDisableSyncState];
     [self.readingListsController setSyncEnabled:NO shouldDeleteLocalLists:NO shouldDeleteRemoteLists:NO];
 }
 

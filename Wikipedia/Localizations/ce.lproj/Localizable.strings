@@ -14,7 +14,6 @@
 "about-repositories" = "Репозитореш";
 "about-repositories-app-source-license-mit" = "MIT лицензи";
 "about-send-feedback" = "Йуханехьа зӀе";
-"about-testers" = "Тестерш";
 "about-title" = "Программех лаьцна";
 "about-translators" = "Гочдархой";
 "about-wikipedia" = "Википеди";
@@ -65,7 +64,7 @@
 "article-about-title" = "ХӀокху агӀонах лаьцна";
 "article-delete" = "ДӀайаккха";
 "article-deleted-accessibility-notification" = "{{PLURAL:$1|йаззам}} дӀабаьккхина";
-"article-languages-filter-placeholder" = "Мотт лаха";
+"article-languages-filter-placeholder" = "Мотт лахар";
 "article-languages-label" = "Мотт харжа";
 "article-languages-others" = "Кхин меттанаш";
 "article-languages-yours" = "Хьан меттанаш";
@@ -141,7 +140,6 @@
 "edit-link-title" = "Хьажорг нисйар";
 "edit-menu-item" = "Нисйан";
 "edit-notices" = "Хийцамах хаамбар";
-"edit-published" = "Нисдар Ӏалашдина";
 "edit-summary-choice-added-image" = "Сурт тӀетоьхна";
 "edit-summary-choice-added-image-and-caption" = "ТӀетоха сурт а, куьг а";
 "edit-summary-choice-fixed-grammar" = "Нийсайаздар";
@@ -205,6 +203,7 @@
 // Fuzzy
 "nearby-distance-label-feet" = "$1 фут";
 "nearby-distance-label-km" = "$1 км";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 м";
 "nearby-distance-label-miles" = "$1 миль";
 "page-protected-can-not-edit" = "ХӀара агӀо тайан хьан бакъо йац";
@@ -227,5 +226,4 @@
 "table-of-contents-heading" = "Чулацам";
 // Fuzzy
 "wikitext-upload-save" = "Ӏалашъеш ю...";
-"wikitext-upload-save-sign-in" = "Чувала";
 "wikitext-upload-save-terms-name" = "Лелоран статус";

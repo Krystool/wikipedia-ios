@@ -2,6 +2,7 @@ import WMF
 import WMFData
 import WMFComponents
 import CocoaLumberjackSwift
+import WMFNativeLocalizations
 
 enum ArticleTabConfig {
     case appendArticleAndAssignCurrentTab // Default navigation
@@ -55,7 +56,7 @@ extension ArticleTabCoordinating {
                     tabConfig = .appendArticleAndAssignCurrentTab
                     
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        WMFAlertManager.sharedInstance.showBottomWarningAlertWithMessage(String.localizedStringWithFormat(CommonStrings.articleTabsLimitToastFormat, tabsMax), subtitle: nil,  buttonTitle: nil, image: WMFSFSymbolIcon.for(symbol: .exclamationMarkTriangleFill), dismissPreviousAlerts: true)
+                        WMFToastManager.sharedInstance.showRichToast(String.localizedStringWithFormat(CommonStrings.articleTabsLimitToastFormat, tabsMax), subtitle: nil, image: WMFSFSymbolIcon.for(symbol: .exclamationMarkTriangleFill), dismissPreviousToasts: true)
                     }
                 }
             default:
@@ -66,10 +67,6 @@ extension ArticleTabCoordinating {
             // If there is no current tab but we were expecting one, create a new tab instead
             let currentTabIdentifier = try await tabsDataController.currentTabIdentifier()
             if currentTabIdentifier == nil {
-                
-                let manuallySetTabAsCurrent = ((try? await manuallySetTabAsCurrentIfNeeded()) ?? false)
-
-                if !manuallySetTabAsCurrent {
                     switch tabConfig {
                     case .appendArticleAndAssignCurrentTabAndCleanoutFutureArticles,
                             .appendArticleAndAssignCurrentTab,
@@ -78,8 +75,7 @@ extension ArticleTabCoordinating {
                     default:
                         break
                     }
-                }
-            }
+           }
             
             switch tabConfig {
             case .appendArticleAndAssignCurrentTabAndCleanoutFutureArticles:
@@ -117,28 +113,6 @@ extension ArticleTabCoordinating {
         } catch {
             DDLogError("Failed to handle tab configuration: \(error)")
         }
-    }
-    
-    private func manuallySetTabAsCurrentIfNeeded() async throws -> Bool {
-        
-        // If this is Group B, it may be that there is a single Main Page non-current tab (fresh launch experience). In this case, set this tab as current.
-        let tabsDataController = WMFArticleTabsDataController.shared
-        
-        if tabsDataController.moreDynamicTabsGroupBEnabled {
-            let tabs = try await tabsDataController.fetchAllArticleTabs()
-            if tabs.count == 1 {
-                let firstTab = tabs[0]
-                if firstTab.articles.count == 1 {
-                    let firstArticle = firstTab.articles[0]
-                    if firstArticle.title == "Main_Page" {
-                        try await tabsDataController.setTabAsCurrent(tabIdentifier: firstTab.identifier)
-                        return true
-                    }
-                }
-            }
-        }
-        
-        return false
     }
     
     // Cleanup needed when tapping Back button
@@ -213,7 +187,7 @@ final class ArticleCoordinator: NSObject, Coordinator, ArticleTabCoordinating {
             self.articleURL?.wmf_languageVariantCode = dataStore.languageLinkController .swiftCompatiblePreferredLanguageVariantCodeForLanguageCode(articleURL.wmf_languageCode)
         }
         
-        guard let articleVC = ArticleViewController(articleURL: articleURL, dataStore: dataStore, theme: theme, source: source, previousPageViewObjectID: previousPageViewObjectID, needsFocusOnSearch: needsFocusOnSearch) else {
+        guard let articleVC = ArticleViewController(articleURL: articleURL, dataStore: dataStore, theme: theme, source: source, previousPageViewObjectID: previousPageViewObjectID) else {
             return false
         }
         articleVC.isRestoringState = isRestoringState

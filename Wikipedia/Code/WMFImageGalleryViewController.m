@@ -3,9 +3,12 @@
 #import "Wikipedia-Swift.h"
 #import "MWKImageInfoFetcher+PicOfTheDayInfo.h"
 #import "WMFImageGalleryDetailOverlayView.h"
+#import "NYTPhotoViewController.h"
+#import "NYTScalingImageView.h"
 @import CoreServices;
 @import UniformTypeIdentifiers;
 @import WMFComponents;
+@import WMFData;
 
 // SINGLETONTODO - this whole file, find [MWKDataStore shared]
 
@@ -25,6 +28,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface NYTPhotosViewController (WMFExposure)
 
 - (NYTPhotoViewController *)newPhotoViewControllerForPhoto:(id<NYTPhoto>)photo;
+- (NYTPhotoViewController *)currentPhotoViewController;
 
 @end
 
@@ -46,7 +50,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nullable, nonatomic, strong) NSData *imageData;
 
-//used for metadaata
+// used for metadaata
 @property (nonatomic, strong, nullable) MWKImageInfo *imageInfo;
 
 @end
@@ -121,14 +125,19 @@ NS_ASSUME_NONNULL_BEGIN
     } else {
         self.overlayView.topCoverBackgroundColor = [UIColor blackColor];
         self.overlayView.navigationBar.backgroundColor = [UIColor clearColor];
+        self.overlayView.navigationBar.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
 
         UIBarButtonItem *share = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"share"] style:UIBarButtonItemStylePlain target:self action:@selector(didTapShareButton)];
         share.tintColor = [UIColor whiteColor];
+        share.accessibilityIdentifier = [WMFAccessibilityIdentifier imageGalleryShareButton];
         self.overlayView.rightBarButtonItem = share;
 
-        UIBarButtonItem *close = [[UIBarButtonItem alloc] initWithTitle:WMFCommonStrings.doneTitle style:UIBarButtonItemStylePlain target:self action:@selector(didTapCloseButton)];
-        close.tintColor = self.theme.colors.link;
-        close.accessibilityLabel = [WMFCommonStrings closeButtonAccessibilityLabel];
+        WMFLargeCloseButtonConfig *config = [[WMFLargeCloseButtonConfig alloc] initWithImageType:WMFLargeCloseButtonImageTypePlainX target:self action:@selector(didTapCloseButton) alignment:AlignmentTrailing];
+        UIBarButtonItem *close = [UIBarButtonItem closeNavigationBarButtonItemWithConfig:config];
+        close.tintColor = [UIColor whiteColor]; // Need to override this since gallery is always dark
+        close.accessibilityLabel = [WMFCommonStringsWrapper closeButtonAccessibilityLabel];
+        close.accessibilityIdentifier = [WMFAccessibilityIdentifier imageGalleryCloseButton];
+
         self.overlayView.leftBarButtonItem = close;
     }
 }
@@ -175,11 +184,28 @@ NS_ASSUME_NONNULL_BEGIN
         self.theme = [NSUserDefaults.standardUserDefaults themeCompatibleWith:self.traitCollection];
     }
     vc.scalingImageView.imageView.alpha = self.theme.imageOpacity;
+    vc.scalingImageView.imageView.accessibilityIdentifier = [WMFAccessibilityIdentifier imageGalleryImage];
+    vc.loadingView.accessibilityIdentifier = [WMFAccessibilityIdentifier imageGalleryLoadingIndicator];
     return vc;
+}
+
+- (CGFloat)captionMaxHeightWithFallback:(CGFloat)fallbackHeight {
+    return fallbackHeight * 0.35f;
+}
+
+- (void)viewWillLayoutSubviews {
+    [super viewWillLayoutSubviews];
+    UIView *captionView = self.overlayView.captionView;
+    if (![captionView isKindOfClass:[WMFImageGalleryDetailOverlayView class]]) {
+        return;
+    }
+    WMFImageGalleryDetailOverlayView *detailOverlayView = (WMFImageGalleryDetailOverlayView *)captionView;
+    detailOverlayView.maximumDescriptionHeight = [self captionMaxHeightWithFallback:self.view.bounds.size.height];
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    self.view.accessibilityIdentifier = [WMFAccessibilityIdentifier imageGalleryView];
     self.view.accessibilityIgnoresInvertColors = YES;
     // Very subtle gradient background so close and share buttons don't disappear when over white background parts of image.
     UIImage *gradientImage = [[UIImage imageNamed:@"gallery-top-gradient"] stretchableImageWithLeftCapWidth:0 topCapHeight:0];
@@ -189,23 +215,26 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Actions
 
 - (void)didTapCloseButton {
-    [self dismissViewControllerAnimated:YES completion:^{
-        if ([self.dismissDelegate respondsToSelector:@selector(galleryDidDismiss:)]) {
-            [self.dismissDelegate galleryDidDismiss:self];
-        }
-    }];
+    [self dismissViewControllerAnimated:YES
+                             completion:^{
+                                 if ([self.dismissDelegate respondsToSelector:@selector(galleryDidDismiss:)]) {
+                                     [self.dismissDelegate galleryDidDismiss:self];
+                                 }
+                             }];
 }
 
 - (void)didTapShareButton {
     id<WMFPhoto> photo = (id<WMFPhoto>)self.currentlyDisplayedPhoto;
     MWKImageInfo *info = [photo bestImageInfo];
-    NSInteger targetWidth = [self.traitCollection wmf_galleryImageWidth];
+    NSInteger targetWidth = [ImageUtils galleryImageWidth];
     NSURL *url = [info imageURLForTargetWidth:targetWidth];
 
     @weakify(self);
     [[[MWKDataStore shared] cacheController] fetchImageWithURL:url
         failure:^(NSError *_Nonnull error) {
-            [[WMFAlertManager sharedInstance] showErrorAlert:error sticky:NO dismissPreviousAlerts:NO tapCallBack:NULL];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [[WMFToastManager sharedInstance] showErrorAlert:error sticky:NO dismissPreviousToasts:NO tapCallBack:NULL];
+            });
         }
         success:^(WMFImageDownload *_Nonnull download) {
             @strongify(self);
@@ -221,7 +250,7 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark NYTPhotosViewControllerDelegate
 
 - (UIView *_Nullable)photosViewController:(NYTPhotosViewController *)photosViewController referenceViewForPhoto:(id<NYTPhoto>)photo {
-    return nil; //TODO: remove this and re-enable animations when tickets for fixing anmimations are addressed
+    return nil; // TODO: remove this and re-enable animations when tickets for fixing anmimations are addressed
     return [self.referenceViewDelegate referenceViewForImageController:self];
 }
 
@@ -266,37 +295,29 @@ NS_ASSUME_NONNULL_BEGIN
     caption.infoTapCallback = ^{
         @strongify(self);
         if (imageInfo.filePageURL) {
-            
+
             // First dismiss self
-            [self dismissViewControllerAnimated:YES completion:^{
-                if ([self.dismissDelegate respondsToSelector:@selector(galleryDidTapInfoButton:)]) {
-                    [self.dismissDelegate galleryDidTapInfoButton:self];
-                }
-                
-                // then navigate to in-app web view
-                [self wmf_navigateToURL:imageInfo.filePageURL.wmf_urlByPrependingSchemeIfSchemeless];
-            }];
+            [self dismissViewControllerAnimated:YES
+                                     completion:^{
+                                         if ([self.dismissDelegate respondsToSelector:@selector(galleryDidTapInfoButton:)]) {
+                                             [self.dismissDelegate galleryDidTapInfoButton:self];
+                                         }
+
+                                         // then navigate to in-app web view
+                                         [self wmf_navigateToURL:imageInfo.filePageURL.wmf_urlByPrependingSchemeIfSchemeless];
+                                     }];
         }
     };
-    @weakify(caption);
-    caption.descriptionTapCallback = ^{
-        [UIView animateWithDuration:0.3
-                         animations:^{
-                             @strongify(self);
-                             @strongify(caption);
-                             [caption toggleDescriptionOpenState];
-                             [self.view layoutIfNeeded];
-                         }
-                         completion:NULL];
-    };
-
-    caption.maximumDescriptionHeight = self.view.frame.size.height;
+    // Use the screen bounds height as a reliable fallback since self.view may not
+    // have been laid out yet when this delegate method is called.
+    CGFloat fallback = self.view.window ? self.view.frame.size.height : UIScreen.mainScreen.bounds.size.height;
+    caption.maximumDescriptionHeight = [self captionMaxHeightWithFallback:fallback];
 
     return caption;
 }
 
 - (void)updateImageForPhotoAfterUserInteractionIsFinished:(id<NYTPhoto> _Nullable)photo {
-    //Exclude UITrackingRunLoopMode so the update doesn't happen while the user is pinching or scrolling
+    // Exclude UITrackingRunLoopMode so the update doesn't happen while the user is pinching or scrolling
     dispatch_async(dispatch_get_main_queue(), ^{
         [self performSelector:@selector(updateImageForPhoto:) withObject:photo afterDelay:0 inModes:@[NSDefaultRunLoopMode]];
     });
@@ -309,7 +330,7 @@ NS_ASSUME_NONNULL_BEGIN
         return;
     }
     WMFImageGalleryDetailOverlayView *detailOverlayView = (WMFImageGalleryDetailOverlayView *)maybeDetailOverlayView;
-    detailOverlayView.maximumDescriptionHeight = size.height;
+    detailOverlayView.maximumDescriptionHeight = [self captionMaxHeightWithFallback:size.height];
 }
 
 - (void)photosViewControllerDidDismiss:(NYTPhotosViewController *)photosViewController {
@@ -328,10 +349,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface WMFPOTDPhoto : WMFBasePhoto <WMFPhoto>
 
-//used to fetch imageInfo
+// used to fetch imageInfo
 @property (nonatomic, strong, nullable) NSDate *potdDate;
 
-//set to display a thumbnail during download
+// set to display a thumbnail during download
 @property (nonatomic, strong, nullable) MWKImageInfo *thumbnailImageInfo;
 
 @end
@@ -392,7 +413,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (nullable NSURL *)imageURL {
-    return [self.imageInfo imageURLForTargetWidth:[[UIScreen mainScreen] wmf_galleryImageWidthForScale]];
+    return [self.imageInfo imageURLForTargetWidth:[ImageUtils galleryImageWidth]];
 }
 
 - (nullable NSAttributedString *)attributedCaptionTitle {
@@ -493,7 +514,7 @@ NS_ASSUME_NONNULL_BEGIN
         [[[MWKDataStore shared] cacheController] fetchImageWithURL:[galleryImage bestImageURL]
             failure:^(NSError *_Nonnull error) {
                 if (error) {
-                    //show error
+                    // show error
                     return;
                 }
             }

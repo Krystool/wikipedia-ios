@@ -1,4 +1,6 @@
 import CocoaLumberjackSwift
+import WMFNativeLocalizations
+import WMFTestKitchen
 
 // MARK: WMFAuthenticationManagerDelegate
 @objc protocol WMFAuthenticationManagerDelegate: NSObjectProtocol {
@@ -51,6 +53,8 @@ import CocoaLumberjackSwift
     @objc public static let didLogOutNotification = Notification.Name("WMFAuthenticationManagerDidLogOut")
     @objc public static let didLogInNotification = Notification.Name("WMFAuthenticationManagerDidLogIn")
     @objc public static let didHandlePrimaryLanguageChange = Notification.Name("WMFAuthenticationManagerDidHandlePrimaryLanguageChange")
+    @objc public static let autoLoginNeedsEmailToken = Notification.Name("WMFAuthenticationManagerAutoLoginNeedsEmailToken")
+    @objc public static let autoLoginNeedsOathToken = Notification.Name("WMFAuthenticationManagerAutoLoginNeedsOathToken")
     
     @objc weak var delegate: WMFAuthenticationManagerDelegate?
     
@@ -73,6 +77,8 @@ import CocoaLumberjackSwift
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(appLanguageDidChange(_:)), name: NSNotification.Name.WMFAppLanguageDidChange, object: nil)
     }
+    
+    private var backgroundAuthInstrument: InstrumentImpl?
     
     // MARK: Public
     
@@ -172,16 +178,17 @@ import CocoaLumberjackSwift
     ///   - oathToken: Two factor password required if user's account has 2FA enabled. Optional.
     ///   - captchaID: CaptchaID if login requiers captcha information
     ///   - captchaWord: CaptchaWord if login requiers captcha information
+    ///   - hCaptchaToken: hCaptcha token if login requires an hCaptcha challenge to be solved
     ///   - reattemptOn401Response: Attempts login again if response http is 401.
     ///   - completion: Completion handler with current user object upon success
-    public func login(username: String, password: String, retypePassword: String?, oathToken: String?, emailAuthCode: String?, captchaID: String?, captchaWord: String?, reattemptOn401Response: Bool = false, completion: @escaping (Result<WMFCurrentUser, Error>) -> Void) {
+    public func login(username: String, password: String, retypePassword: String?, oathToken: String?, emailAuthCode: String?, captchaID: String?, captchaWord: String?, hCaptchaToken: String? = nil, reattemptOn401Response: Bool = false, completion: @escaping (Result<WMFCurrentUser, Error>) -> Void) {
         guard let siteURL = loginSiteURL else {
             DispatchQueue.main.async {
                 completion(.failure(LoginError.missingLoginURL))
             }
             return
         }
-        accountLoginLogoutFetcher.login(username: username, password: password, retypePassword: retypePassword, oathToken: oathToken, emailAuthCode: emailAuthCode, captchaID: captchaID, captchaWord: captchaWord, siteURL: siteURL, reattemptOn401Response: reattemptOn401Response, success: {username in
+        accountLoginLogoutFetcher.login(username: username, password: password, retypePassword: retypePassword, oathToken: oathToken, emailAuthCode: emailAuthCode, captchaID: captchaID, captchaWord: captchaWord, hCaptchaToken: hCaptchaToken, siteURL: siteURL, reattemptOn401Response: reattemptOn401Response, success: {username in
 
             // Upon successful login, try fetching userinfo to populate user cache
             self.currentUserFetcher.fetch(siteURL: siteURL, success: { user in
@@ -215,27 +222,42 @@ import CocoaLumberjackSwift
     /// - Parameters:
     ///   - reattemptOn401Response: Attempts login again if response http is 401.
     ///   - completion: Completion handler with current user object upon success
-    public func loginWithSavedCredentials(reattemptOn401Response: Bool = false, completion: @escaping (Result<WMFCurrentUser, Error>) -> Void) {
+    public func loginWithSavedCredentials(reattemptOn401Response: Bool = false, emailToken: String? = nil, oathToken: String? = nil, backgroundAuthInstrument: WMFTestKitchen.InstrumentImpl? = nil, completion: @escaping (Result<WMFCurrentUser, Error>) -> Void) {
+        
+        // Instrument a background login attempt
+        self.backgroundAuthInstrument = backgroundAuthInstrument ?? TestKitchenAdapter.shared.client.getInstrument(name: "apps-authentication")
+            .setDefaultActionSource("background_login")
+            .startFunnel(name: "login_account")
         
         guard hasKeychainCredentials,
               let userName = KeychainCredentialsManager.shared.username,
               let password = KeychainCredentialsManager.shared.password
         else {
             let error = LoginError.blankUsernameOrPassword
+            // This is legitimate for logged out users, so we won't log this error via authInstrument
+            self.backgroundAuthInstrument = nil
             completion(.failure(error))
             return
         }
         
+        backgroundAuthInstrument?.submitInteraction(action: "start")
+        
         guard let siteURL = loginSiteURL else {
-            completion(.failure(LoginError.missingLoginURL))
+            let error = LoginError.missingLoginURL
+            self.backgroundAuthInstrument?.submitInteraction(action: "error", actionContext: ["validation_error": error.logDescription])
+            self.backgroundAuthInstrument = nil
+            completion(.failure(error))
             return
         }
         
         let performLogin: () -> Void = {
-            self.login(username: userName, password: password, retypePassword: nil, oathToken: nil, emailAuthCode: nil, captchaID: nil, captchaWord: nil, reattemptOn401Response: reattemptOn401Response, completion: { (loginResult) in
+            self.login(username: userName, password: password, retypePassword: nil, oathToken: oathToken, emailAuthCode: emailToken, captchaID: nil, captchaWord: nil, reattemptOn401Response: reattemptOn401Response, completion: { (loginResult) in
                 DispatchQueue.main.async {
                     switch loginResult {
                     case .success(let user):
+                        
+                        self.backgroundAuthInstrument?.submitInteraction(action: "success")
+                        self.backgroundAuthInstrument = nil
                         
                         completion(.success(user))
                         
@@ -243,7 +265,7 @@ import CocoaLumberjackSwift
                         guard !(error is URLError) else {
                             // Connection error, assume login would have been successful
                             
-                            let user = WMFCurrentUser(userID: 0, name: userName, groups: [], editCount: 0, isBlocked: false, isIP: false, isTemp: false, registrationDateString: nil)
+                            let user = WMFCurrentUser(userID: 0, globalUserID: 0, name: userName, groups: [], editCount: 0, isBlocked: false, isIP: false, isTemp: false, registrationDateString: nil)
                             
                             if let host = siteURL.host {
                                 self.currentUserCache[host] = user
@@ -254,8 +276,37 @@ import CocoaLumberjackSwift
                             return
                         }
                         
-                        self.logout(initiatedBy: .app)
-                        completion(.failure(error))
+                        if let recognizedError = error as? WMFAccountLoginError {
+                            self.backgroundAuthInstrument?.submitInteraction(action: "error", actionContext: ["validation_error": recognizedError.testKitchenValidationError])
+                            
+                            switch recognizedError {
+                            case .needsOathTokenFor2FA(let mediaWikiMessage):
+                                
+                                var userInfo: [AnyHashable : Any] = ["mediaWikiMessage": mediaWikiMessage?.text as Any]
+                                if let backgroundAuthInstrument = self.backgroundAuthInstrument {
+                                    userInfo["authInstrument"] = backgroundAuthInstrument
+                                }
+                                
+                                NotificationCenter.default.post(name: WMFAuthenticationManager.autoLoginNeedsOathToken, object: nil, userInfo: userInfo)
+                                completion(.failure(error))
+                            case .needsEmailAuthToken(let mediaWikiMessage):
+                                var userInfo: [AnyHashable : Any] = ["mediaWikiMessage": mediaWikiMessage?.text as Any]
+                                
+                                if let backgroundAuthInstrument = self.backgroundAuthInstrument {
+                                    userInfo["authInstrument"] = backgroundAuthInstrument
+                                }
+                                
+                                NotificationCenter.default.post(name: WMFAuthenticationManager.autoLoginNeedsEmailToken, object: nil, userInfo: userInfo)
+                                completion(.failure(error))
+                            default:
+                                self.logout(initiatedBy: .app)
+                                completion(.failure(error))
+                            }
+                        } else {
+                            self.backgroundAuthInstrument?.submitInteraction(action: "error", actionContext: ["code": error.logDescription])
+                            self.logout(initiatedBy: .app)
+                            completion(.failure(error))
+                        }
                     }
                 }
             })
@@ -272,6 +323,10 @@ import CocoaLumberjackSwift
                 if user.authState == .ip || user.authState == .temporary {
                     performLogin()
                 } else {
+                    
+                    self.backgroundAuthInstrument?.submitInteraction(action: "success")
+                    self.backgroundAuthInstrument = nil
+                    
                     NotificationCenter.default.post(name: WMFAuthenticationManager.didLogInNotification, object: nil)
                     completion(.success(user))
                 }
@@ -281,16 +336,22 @@ import CocoaLumberjackSwift
                 guard !(error is URLError) else {
                     // If connection error, assume login would have been successful
                     
-                    let user = WMFCurrentUser(userID: 0, name: userName, groups: [], editCount: 0, isBlocked: false, isIP: false, isTemp: false, registrationDateString: nil)
+                    let user = WMFCurrentUser(userID: 0, globalUserID: 0, name: userName, groups: [], editCount: 0, isBlocked: false, isIP: false, isTemp: false, registrationDateString: nil)
                     
                     if let host = siteURL.host {
                         self.currentUserCache[host] = user
                     }
                     
                     NotificationCenter.default.post(name: WMFAuthenticationManager.didLogInNotification, object: nil)
+                    
+                    self.backgroundAuthInstrument?.submitInteraction(action: "error", actionContext: ["code": error.logDescription])
+                    self.backgroundAuthInstrument = nil
+                    
                     completion(.success(user))
                     return
                 }
+                
+                self.backgroundAuthInstrument?.submitInteraction(action: "error", actionContext: ["code": error.logDescription])
                 
                 performLogin()
             }
@@ -328,13 +389,12 @@ import CocoaLumberjackSwift
     }
 
     // MARK: Logout
-
+    
     /// Logs out any authenticated user via API call and clears out any associated cookies and cache
     /// - Parameters:
     ///   - logoutInitiator: Initiator of the logout
     ///   - completion: Completion handler once logout is done
-    @objc(logoutInitiatedBy:completion:)
-    public func logout(initiatedBy logoutInitiator: LogoutInitiator, completion: @escaping () -> Void = {}) {
+    public func logout(initiatedBy logoutInitiator: LogoutInitiator, authInstrument: InstrumentImpl?, completion: @escaping () -> Void = {}) {
         delegate?.authenticationManagerWillLogOut {
             if logoutInitiator == .app || logoutInitiator == .server {
                 self.isUserUnawareOfLogout = true
@@ -343,7 +403,25 @@ import CocoaLumberjackSwift
                 NotificationCenter.default.post(name: WMFAuthenticationManager.didLogOutNotification, object: nil)
             }
             
+            if self.isUserUnawareOfLogout && self.backgroundAuthInstrument == nil {
+                // Instrument a background logout attempt
+                self.backgroundAuthInstrument = TestKitchenAdapter.shared.client.getInstrument(name: "apps-authentication")
+                    .setDefaultActionSource("background_logout")
+                    .startFunnel(name: "logout_account")
+                self.backgroundAuthInstrument?.submitInteraction(action: "start")
+            } else if self.isUserUnawareOfLogout && self.backgroundAuthInstrument != nil {
+                self.backgroundAuthInstrument?.setDefaultActionSource("background_logout")
+            }
+            
             guard let loginSiteURL = self.loginSiteURL else {
+                
+                if self.isUserUnawareOfLogout {
+                    self.backgroundAuthInstrument?.submitInteraction(action: "error", actionContext: ["validation_error": "missing_loginSiteURL"])
+                    self.backgroundAuthInstrument = nil
+                } else {
+                    authInstrument?.submitInteraction(action: "error", actionContext: ["validation_error": "missing_loginSiteURL"])
+                }
+                
                 self.reset()
                 completion()
                 postDidLogOutNotification()
@@ -353,12 +431,27 @@ import CocoaLumberjackSwift
             self.accountLoginLogoutFetcher.logout(loginSiteURL: loginSiteURL, reattemptOn401Response: false) { error in
                 DispatchQueue.main.async {
                     if let error = error {
+                        
+                        if self.isUserUnawareOfLogout {
+                            self.backgroundAuthInstrument?.submitInteraction(action: "error", actionContext: ["code": error.logDescription])
+                            self.backgroundAuthInstrument = nil
+                        } else {
+                            authInstrument?.submitInteraction(action: "error", actionContext: ["code": error.logDescription])
+                        }
+                        
                         // ...but if "action=logout" fails we *still* want to clear local login settings, which still effectively logs the user out.
                         DDLogError("Failed to log out, delete login tokens and other browser cookies: \(error)")
                         self.reset()
                         completion()
                         postDidLogOutNotification()
                         return
+                    }
+                    
+                    if self.isUserUnawareOfLogout {
+                        self.backgroundAuthInstrument?.submitInteraction(action: "success")
+                        self.backgroundAuthInstrument = nil
+                    } else {
+                        authInstrument?.submitInteraction(action: "success")
                     }
                     
                     DDLogDebug("Successfully logged out, deleted login tokens and other browser cookies")
@@ -369,6 +462,12 @@ import CocoaLumberjackSwift
                 }
             }
         }
+    }
+    
+    // Use to call from Objective-C
+    @objc(logoutInitiatedBy:completion:)
+    public func logout(initiatedBy logoutInitiator: LogoutInitiator, completion: @escaping () -> Void = {}) {
+        self.logout(initiatedBy: logoutInitiator, authInstrument: nil, completion: completion)
     }
 
     @objc public func userDidAcknowledgeUnintentionalLogout() {

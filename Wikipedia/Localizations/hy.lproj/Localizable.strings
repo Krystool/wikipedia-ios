@@ -13,7 +13,6 @@
 
 "about-contributors" = "Հեղինակներ";
 "about-libraries-license" = "Թույլատրագիր";
-"about-testers" = "Փորձարկողներ";
 "about-title" = "Ծրագրի մասին";
 "about-translators" = "Թարգմանիչներ";
 "about-wikimedia-foundation" = "Վիքիմեդիա Հիմնադրամ";
@@ -35,6 +34,7 @@
 "action-sort" = "Տեսակավորել";
 "action-undo" = "Հետ շրջել";
 "action-update" = "Թարմացնել";
+"activity-tab-articles-read-graph-label" = "Հոդվածներ";
 "activity-tab-title" = "Ակտիվություն";
 "announcements-dismiss" = "Փակել";
 "article-delete" = "Ջնջել";
@@ -88,10 +88,8 @@
 "find-textfield-accessibility" = "Գտնել";
 "forgot-password-button-title" = "Վերակայել";
 "forgot-password-username-or-email-title" = "Կամ";
-"history-clear-all" = "Մաքրել";
 "history-clear-delete-all" = "Այո, ջնջել ամբողջը";
 "history-title" = "Պատմություն";
-"home-button-history-accessibility-label" = "Վիքիպեդիա, վերադառնալ Պատմության";
 "home-button-saved-accessibility-label" = "Վիքիպեդիա, վերադառնալ Պահված";
 "icon-shortcut-random-title" = "Պատահական հոդված";
 "icon-shortcut-search-title" = "Որոնել Վիքիպեդիայում";
@@ -131,8 +129,10 @@
 "main-menu-zero-faq" = "Վիքիպեդիա Զրո ՀՏՀ";
 "more-languages-tooltip-title" = "Ավելացնել լեզուներ";
 "navbar-title-mode-edit-wikitext-preview" = "Նախադիտում";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 ֆուտ";
 "nearby-distance-label-km" = "$1 կմ";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 մ";
 "nearby-distance-label-miles" = "$1 մղոն";
 "next-action-title" = "Հաջորդ";
@@ -161,9 +161,6 @@
 "places-search-default-text" = "Որոնել վայրեր";
 "places-search-top-articles-that-match-scope" = "Մոտակայքում";
 "reading-list-create-new-list-description" = "Նկարագրություն";
-"replace-infolabel-method-replace" = "Փոխարինել";
-"replace-infolabel-method-replace-all" = "Փոխարինել բոլորը";
-"replace-textfield-accessibility" = "Փոխարինել";
 "saved-all-articles-title" = "Բոլոր հոդվածներ";
 "search-button-accessibility-label" = "Որոնել Վիքիպեդիայում";
 "search-clear-title" = "Մաքրել";
@@ -177,8 +174,6 @@
 "settings-donate" = "Նվիրաբերել";
 "settings-my-languages" = "Իմ լեզուններ";
 "settings-notifications" = "Push ծանուցումներ";
-"settings-notifications-learn-more" = "Կարդալ ավելին ծանուցումների մասին";
-"settings-notifications-system-turn-on" = "Միացնել ծանուցումներ";
 "settings-primary-language" = "Հիմնական";
 "settings-title" = "Կարգավորումներ";
 "sort-by-title-action" = "Վերնագիր";
@@ -203,9 +198,7 @@
 "welcome-intro-free-encyclopedia-more-about" = "Վիքիպեդիայի մասին";
 "wikitext-preview-save-changes-title" = "Պահպանել փոփոխությունները";
 "wikitext-upload-save" = "Պահպանվում է...";
-"wikitext-upload-save-sign-in" = "Մուտք գործել";
 "wikitext-upload-save-terms-name" = "Օգտագործման պայմաններ";
 "year-in-review-donate" = "Նվիրաբերել";
 "year-in-review-finish" = "Վերջացնել";
-"year-in-review-personalized-editing-title-format-500plus" = "Դուք Վիքիպեդիան խմբագրել եք 500+ անգամ";
 "yesterday-title" = "Երեկ";

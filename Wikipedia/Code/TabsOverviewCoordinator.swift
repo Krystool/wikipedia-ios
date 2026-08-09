@@ -3,6 +3,7 @@ import SwiftUI
 import WMFComponents
 import WMFData
 import CocoaLumberjackSwift
+import WMFNativeLocalizations
 
 @MainActor
 final class TabsOverviewCoordinator: NSObject, Coordinator {
@@ -11,6 +12,11 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
     let dataStore: MWKDataStore
     private let dataController: WMFArticleTabsDataController
     private let summaryController: ArticleSummaryController
+    private var presentTask: Task<Void, Never>?
+
+    deinit {
+        presentTask?.cancel()
+    }
 
     @discardableResult
     func start() -> Bool {
@@ -29,7 +35,7 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
 
     private func surveyViewController() -> UIViewController {
         let subtitle = WMFLocalizedString("tabs-survey-title", value: "Help improve tabs. Are you satisfied with this feature?", comment: "Title for article tabs survey")
-        
+
         let surveyLocalizedStrings = WMFSurveyViewModel.LocalizedStrings(
             title: CommonStrings.satisfactionSurveyTitle,
             cancel: CommonStrings.cancelActionTitle,
@@ -53,28 +59,28 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
         }, submitAction: { [weak self] options, otherText in
             ArticleTabsFunnel.shared.logFeedbackSubmit(selectedItems: options, comment: otherText)
             self?.navigationController.presentedViewController?.dismiss(animated: true, completion: {
-                let image = UIImage(systemName: "checkmark.circle.fill")
-                WMFAlertManager.sharedInstance.showBottomAlertWithMessage(CommonStrings.feedbackSurveyToastTitle, subtitle: nil, image: image, type: .custom, customTypeName: "feedback-submitted", dismissPreviousAlerts: true)
+                let image = WMFSFSymbolIcon.for(symbol: .checkmarkCircleFill)
+                WMFToastManager.sharedInstance.showRichToast(CommonStrings.feedbackSurveyToastTitle, subtitle: nil, image: image, dismissPreviousToasts: true)
             })
         })
 
         let hostedView = WMFComponentHostingController(rootView: surveyView)
         return hostedView
     }
-    
-    
+
+
     public func showAlertForArticleSuggestionsDisplayChangeConfirmation() {
         if dataController.userHasHiddenArticleSuggestionsTabs {
-            WMFAlertManager.sharedInstance.showBottomAlertWithMessage(
+            WMFToastManager.sharedInstance.showRichToast(
                 WMFLocalizedString("tabs-suggested-articles-hide-suggestions-confirmation", value: "Suggestions are now hidden", comment: "Confirmation on hiding of the suggested articles in tabs."),
                 subtitle: nil,
-                buttonTitle: nil,
-                image: WMFSFSymbolIcon.for(symbol: .checkmark),
-                dismissPreviousAlerts: true
+                image: WMFSFSymbolIcon.for(symbol: .checkmarkCircleFill),
+                duration: 10,
+                dismissPreviousToasts: true
             )
         }
     }
-    
+
     func closeAllTabsTitle(numberTabs: Int) -> String {
         let format = WMFLocalizedString("close-all-tabs-confirmation-title-with-value", value: "Close {{PLURAL:%1$d|%1$d tab|%1$d tabs}}?", comment: "Title of alert that asks user if they want to delete all tabs, $1 is representative of the number of tabs they have open.")
         return String.localizedStringWithFormat(format, numberTabs)
@@ -89,18 +95,18 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
         let format = WMFLocalizedString("closed-all-tabs-confirmation-with-value", value: "{{PLURAL:%1$d|%1$d tab|%1$d tabs}} closed.", comment: "Confirmation title of deleting all tabs. $1 is the number of tabs deleted.")
         return String.localizedStringWithFormat(format, numberTabs)
     }
-    
+
     private func presentTabs() {
-        
+
         let didTapTab: (WMFArticleTabsDataController.WMFArticleTab) -> Void = { [weak self] tab in
             self?.tappedTab(tab)
         }
-        
+
         let didTapAddTab: () -> Void = { [weak self] in
             guard let self else { return }
             self.tappedAddTab()
         }
-        
+
         let didTapDone: () -> Void = { [weak self] in
             guard let self else { return }
             self.tappedDone()
@@ -112,21 +118,6 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
             self.tappedShareTab(tab, sourceFrameInWindow: frame)
         }
 
-        let displayDeleteAllTabsToast: (Int) -> Void = { [weak self] articleTabsCount in
-            guard let self else { return }
-            Task {
-                WMFAlertManager.sharedInstance.showBottomAlertWithMessage(
-                    self.closedAlertsNotification(numberTabs: articleTabsCount),
-                    subtitle: nil,
-                    buttonTitle: nil,
-                    image: WMFSFSymbolIcon.for(symbol: .checkmark),
-                    dismissPreviousAlerts: true
-                ) {
-                    self.tappedAddTab()
-                }
-            }
-        }
-        
         let showSurveyClosure = { [weak self] in
             if let shouldShowSurvey = self?.dataController.shouldShowSurvey(), shouldShowSurvey {
                 guard let presentedVC = self?.navigationController.presentedViewController else { return }
@@ -134,7 +125,7 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
                 guard let surveyVC else { return }
                 ArticleTabsFunnel.shared.logFeedbackImpression()
                 presentedVC.present(surveyVC, animated: true)
-                
+
                 surveyVC.modalPresentationStyle = .pageSheet
                 if let sheet = surveyVC.sheetPresentationController {
                     sheet.detents = [.large()]
@@ -142,11 +133,11 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
                 }
             }
         }
-        
-        Task { [weak self] in
+
+        presentTask = Task { [weak self] in
             guard let self else { return }
             let articleTabsCount = (try? await dataController.tabsCount()) ?? 0
-            
+
             let localizedStrings = WMFArticleTabsViewModel.LocalizedStrings(
                 navBarTitleFormat: WMFLocalizedString("tabs-navbar-title-format", value: "{{PLURAL:%1$d|%1$d tab|%1$d tabs}}", comment: "$1 is the amount of tabs. Navigation title for tabs, displaying how many open tabs."),
                 mainPageTitle: nil,
@@ -181,30 +172,19 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
                 didToggleSuggestedArticles: showAlertForArticleSuggestionsDisplayChangeConfirmation
             )
 
-            articleTabsViewModel.loadDidYouKnowViewModel = { [weak self] in
-                guard let self else { return nil }
-                return try? await self.loadDidYouKnowViewModel()
-            }
-
-            articleTabsViewModel.loadRecommendationsViewModel = { [weak self] in
-                guard let self else { return nil }
-                return try? await self.loadRecommendedArticlesViewModel()
-            }
-
             let articleTabsView = WMFArticleTabsView(viewModel: articleTabsViewModel)
             let hostingController = WMFArticleTabsHostingController(
                 rootView: articleTabsView,
                 viewModel: articleTabsViewModel,
-                doneButtonText: CommonStrings.doneTitle,
                 articleTabsCount: articleTabsCount
             )
-            
+
             let navVC = WMFComponentNavigationController(
                 rootViewController: hostingController,
                 modalPresentationStyle: .overFullScreen,
                 customBarBackgroundColor: theme.colors.midBackground
             )
-            
+
             navigationController.present(navVC, animated: true) { [weak self] in
                 self?.dataController.updateSurveyDataTabsOverviewSeenCount()
                 guard self != nil else { return }
@@ -213,55 +193,9 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
         }
     }
 
-    @MainActor
-    private func loadRecommendedArticlesViewModel() async throws -> WMFTabsOverviewRecommendationsViewModel? {
-
-        let seedURLsSet = try? await getRecentTabArticleURLs()
-        guard let seedURLsSet else { return nil }
-
-        let seedURLs = Array(seedURLsSet)
-
-        let articles = await relatedArticlesProviderClosure(seedURLs)
-
-        guard let articles, !articles.isEmpty else {
-            DDLogWarn("TabsOverviewCoordinator: related articles provider returned empty")
-            return nil
-        }
-
-        let limit = UIDevice.current.userInterfaceIdiom == .pad ? 5 : 3
-        let limitedArticles = Array(articles.prefix(limit))
-
-        guard limitedArticles.count > 1 else { return nil }
-
-        let title = WMFLocalizedString(
-            "tabs-overview-recommendations-title",
-            value: "Based on your most recent tabs",
-            comment: "title for section on tabs overview with article recommendations"
-        )
-
-        let onTapArticleAction: WMFTabsOverviewRecommendationsViewModel.OnRecordTapAction = { [weak self] historyItem in
-            guard let self else { return }
-            self.tappedArticle(historyItem)
-            ArticleTabsFunnel.shared.logTabsOverviewTappedBYR()
-        }
-
-        let shareArticleAction: WMFHistoryViewModel.ShareRecordAction = { [weak self] frame, historyItem in
-            guard let self else { return }
-            self.shareArticleRecommendation(item:historyItem, sourceFrameInWindow: frame)
-        }
-
-        return WMFTabsOverviewRecommendationsViewModel(title: title,
-                                                       openButtonTitle: CommonStrings.articleTabsOpen,
-                                                       shareButtonTitle: CommonStrings.shareActionTitle,
-                                                       articles: limitedArticles,
-                                                       onTapArticle: onTapArticleAction,
-                                                       shareRecordAction: shareArticleAction
-        )
-    }
-
     private func tappedArticle(_ item: HistoryItem) {
         if let articleURL = item.url {
-            let articleCoordinator = ArticleCoordinator(navigationController: navigationController, articleURL: articleURL, dataStore: dataStore, theme: theme, source: .history, tabConfig: .appendArticleAndAssignNewTabAndSetToCurrent)
+            let articleCoordinator = ArticleCoordinator(navigationController: navigationController, articleURL: articleURL, dataStore: dataStore, theme: theme, source: .undefined, tabConfig: .appendArticleAndAssignNewTabAndSetToCurrent)
             if let presented = navigationController.presentedViewController {
                 presented.dismiss(animated: true) {
                     articleCoordinator.start()
@@ -270,126 +204,7 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
         }
     }
 
-    private func shareArticleRecommendation(item: HistoryItem, sourceFrameInWindow: CGRect?) {
-        guard let url = item.url else { return }
-        let articleURL = url.wmf_URLForTextSharing
-        let presenter = navigationController.presentedViewController ?? navigationController
-        shareURL(articleURL, from: presenter, sourceFrameInWindow: sourceFrameInWindow)
-    }
-
-    // Returns unordered set of URLs
-    @MainActor
-    private func getRecentTabArticleURLs() async throws -> Set<URL> {
-        let articleTabs = try await dataController.fetchAllArticleTabs()
-        let articleLimit = 1
-        let tabLimit = 2
-
-        guard !articleTabs.isEmpty else {
-            return []
-        }
-
-        guard let siteURL = dataStore.languageLinkController.appLanguage?.siteURL,
-              let mainPageURL = siteURL.wmf_URL(withTitle: "Main Page") else {
-            return []
-        }
-
-        var urls = Set<URL>()
-        urls.reserveCapacity(tabLimit * articleLimit)
-
-        let nonMainPageTabs = articleTabs.filter { tab in
-            tab.articles.contains { $0.articleURL != mainPageURL }
-        }
-
-        let newestTabs = nonMainPageTabs.reversed().prefix(tabLimit)
-
-        for tab in newestTabs {
-            for article in tab.articles.reversed() {
-                guard let url = article.articleURL else { break }
-                if url != mainPageURL {
-                    urls.insert(url)
-                }
-                
-                if urls.count >= articleLimit {
-                    break
-                }
-            }
-        }
-
-        return urls
-    }
-
-    private func loadDidYouKnowViewModel() async throws -> WMFTabsOverviewDidYouKnowViewModel? {
-
-        let facts = await didYouKnowProviderClosure()
-        guard let facts, !facts.isEmpty else {
-            DDLogWarn("TabsOverviewCoordinator: DYK provider returned empty")
-            return nil
-        }
-
-        let localized = WMFTabsOverviewDidYouKnowViewModel.LocalizedStrings(
-            didYouKnowTitle: WMFLocalizedString("did-you-know", value: "Did you know?", comment: "Text displayed as heading for section of tabs overview dedicated to Did You Know "),
-            fromSource: self.stringWithLocalizedCurrentSiteLanguageReplacingPlaceholder(in: CommonStrings.fromWikipedia, fallingBackOn: CommonStrings.defaultFromWikipedia)
-        )
-
-        let viewModel = WMFTabsOverviewDidYouKnowViewModel(
-            facts: facts.map { $0.html },
-            languageCode: dataStore.languageLinkController.appLanguage?.languageCode,
-            tappedLinkAction: tappedDYKLink(url:),
-            dykLocalizedStrings: localized
-        )
-        return viewModel
-    }
-    
-    
-    private func tappedDYKLink(url: URL) {
-        
-        ArticleTabsFunnel.shared.logTabsOverviewTappedDYK()
-        
-        guard let articleURL = URL(string: url.absoluteString) else {
-            return
-        }
-
-        let linkCoordinator = LinkCoordinator(
-            navigationController: navigationController,
-            url: articleURL,
-            dataStore: self.dataStore,
-            theme: self.theme,
-            articleSource: .undefined,
-            tabConfig: .appendArticleAndAssignNewTabAndSetToCurrent
-        )
-        if let presented = navigationController.presentedViewController {
-            presented.dismiss(animated: true) {
-                linkCoordinator.start()
-            }
-        }
-    }
-
-    private lazy var didYouKnowProviderClosure: (@MainActor () async -> [WMFDidYouKnow]?) = { [weak self] in
-        guard let self else { return nil }
-        guard let siteURL = dataStore.languageLinkController.appLanguage?.siteURL else { return nil }
-        let dc = NewArticleTabDataController(dataStore: dataStore)
-        do {
-            return try await dc.fetchDidYouKnowFacts(siteURL: siteURL)
-        } catch {
-            DDLogError("DYK fetch error: \(error)")
-            return nil
-        }
-    }
-
-    private lazy var relatedArticlesProviderClosure: (@MainActor (_ sourceArticles: [URL?]) async -> [HistoryRecord]?) = { [weak self] sourceArticles in
-        guard let self else { return nil }
-        let dc = NewArticleTabDataController(dataStore: self.dataStore)
-        do {
-            let maxArticlesPerSource: Int =  UIDevice.current.userInterfaceIdiom == .pad ? 5 : 3
-            return try await dc.getRelatedArticles(for: sourceArticles, maxTotal: maxArticlesPerSource)
-        } catch {
-            DDLogError("Related articles fetch error: \(error)")
-            return nil
-        }
-    }
-
-    private func stringWithLocalizedCurrentSiteLanguageReplacingPlaceholder(in format: String, fallingBackOn genericString: String
-    ) -> String {
+    private func stringWithLocalizedCurrentSiteLanguageReplacingPlaceholder(in format: String, fallingBackOn genericString: String) -> String {
         guard let code = self.dataStore.languageLinkController.appLanguage?.languageCode else {
             return genericString
         }
@@ -416,14 +231,14 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
                 return
             }
         }
-        
+
         // Only push on last article
         if let article = tab.articles.last {
             guard let siteURL = article.project.siteURL,
                   let articleURL = siteURL.wmf_URL(withTitle: article.title) else {
                 return
             }
-            
+
             let tabConfig = ArticleTabConfig.assignParticularTabAndSetToCurrent(WMFArticleTabsDataController.Identifiers(tabIdentifier: tab.identifier, tabItemIdentifier: article.identifier))
                 // isRestoringState = true allows for us to retain the previous scroll position
             let articleCoordinator = ArticleCoordinator(navigationController: navigationController, articleURL: articleURL, dataStore: MWKDataStore.shared(), theme: theme, needsAnimation: false, source: .undefined, isRestoringState: true, tabConfig: tabConfig)
@@ -432,46 +247,28 @@ final class TabsOverviewCoordinator: NSObject, Coordinator {
         }
         navigationController.dismiss(animated: true)
     }
-    
+
     private func tappedAddTab() {
         guard let siteURL = dataStore.languageLinkController.appLanguage?.siteURL,
               let articleURL = siteURL.wmf_URL(withTitle: "Main Page") else {
             return
         }
-        
-        if dataController.moreDynamicTabsGroupBEnabled {
-            navigationController.dismiss(animated: true) { [weak self] in
-                guard let self else { return }
-                let articleCoordinator = ArticleCoordinator(
-                    navigationController: navigationController,
-                    articleURL: articleURL,
-                    dataStore: MWKDataStore.shared(),
-                    theme: theme,
-                    needsAnimation: false,
-                    source: .undefined,
-                    tabConfig: .assignNewTabAndSetToCurrent,
-                    needsFocusOnSearch: true)
-                ArticleTabsFunnel.shared.logAddNewBlankTab()
-                articleCoordinator.start()
-            }
-        } else {
-            let articleCoordinator = ArticleCoordinator(
-                navigationController: navigationController,
-                articleURL: articleURL,
-                dataStore: MWKDataStore.shared(),
-                theme: theme,
-                needsAnimation: false,
-                source: .undefined,
-                tabConfig: .assignNewTabAndSetToCurrent,
-                needsFocusOnSearch: true)
-            ArticleTabsFunnel.shared.logAddNewBlankTab()
-            articleCoordinator.start()
-            
-            navigationController.dismiss(animated: true)
-        }
-        
+
+        let articleCoordinator = ArticleCoordinator(
+            navigationController: navigationController,
+            articleURL: articleURL,
+            dataStore: MWKDataStore.shared(),
+            theme: theme,
+            needsAnimation: false,
+            source: .undefined,
+            tabConfig: .assignNewTabAndSetToCurrent,
+            needsFocusOnSearch: true)
+        ArticleTabsFunnel.shared.logAddNewBlankTab()
+        articleCoordinator.start()
+
+        navigationController.dismiss(animated: true)
     }
-    
+
     private func tappedDone() {
         navigationController.dismiss(animated: true)
     }
@@ -511,33 +308,33 @@ extension TabsOverviewCoordinator: WMFArticleTabsLoggingDelegate {
     func logArticleTabsOverviewImpression() {
         ArticleTabsFunnel.shared.logTabsOverviewImpression()
     }
-    
+
     func logArticleTabsOverviewTappedCloseTab() {
         ArticleTabsFunnel.shared.logTabsOverviewCloseTab()
     }
-    
+
     nonisolated func logArticleTabsArticleClick(wmfProject: WMFProject?) {
         if let url = wmfProject?.siteURL, let project =  WikimediaProject(siteURL:url) {
             ArticleTabsFunnel.shared.logTabsOverviewArticleClick(project: project)
         }
     }
-    
+
     func logArticleTabsOverviewTappedHideSuggestions() {
         ArticleTabsFunnel.shared.logTabsOverflowHideArticleSuggestionsTap()
     }
-    
+
     func logArticleTabsOverviewTappedShowSuggestions() {
         ArticleTabsFunnel.shared.logTabsOverflowShowArticleSuggestionsTap()
     }
-    
+
     func logArticleTabsOverviewTappedCloseAllTabs() {
         ArticleTabsFunnel.shared.logTabsOverflowCloseAllTabsTap()
     }
-    
+
     func logArticleTabsOverviewTappedCloseAllTabsConfirmCancel() {
         ArticleTabsFunnel.shared.logTabsOverviewCloseAllTabsConfirmCancelTap()
     }
-    
+
     func logArticleTabsOverviewTappedCloseAllTabsConfirmClose() {
         ArticleTabsFunnel.shared.logTabsOverviewCloseAllTabsConfirmCloseTap()
     }

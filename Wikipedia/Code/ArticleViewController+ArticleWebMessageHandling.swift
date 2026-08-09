@@ -1,8 +1,10 @@
 import WMF
+import WMFNativeLocalizations
+import WMFData
 
 extension ArticleViewController: ArticleWebMessageHandling {
     
-    func didRecieve(action: ArticleWebMessagingController.Action) {
+    func didReceive(action: ArticleWebMessagingController.Action) {
         dismissReferencesPopover()
         switch action {
         case .setup:
@@ -38,6 +40,15 @@ extension ArticleViewController: ArticleWebMessageHandling {
     }
     
     func handleTableOfContents(items: [TableOfContentsItem]) {
+        guard let articleLoadWaitGroup else {
+            return setupTableOfContents(items: items)
+        }
+        articleLoadWaitGroup.notify(queue: .main) { [weak self] in
+            self?.setupTableOfContents(items: items)
+        }
+    }
+
+    private func setupTableOfContents(items: [TableOfContentsItem]) {
         let titleItem = TableOfContentsItem(id: 0, titleHTML: article.displayTitle ?? article.displayTitleHTML, anchor: "", rootItemId: 0, indentationLevel: 0)
         var allItems: [TableOfContentsItem] = [titleItem]
         allItems.append(contentsOf: items)
@@ -56,8 +67,6 @@ extension ArticleViewController: ArticleWebMessageHandling {
     func handlePCSDidFinishInitialSetup() {
         let oldState = state
         state = .loaded
-        
-        presentTooltipsIfNeeded()
 
         refreshControl.endRefreshing()
         loadSummary(oldState: oldState)
@@ -96,7 +105,7 @@ extension ArticleViewController: ArticleWebMessageHandling {
             leadImageHeightConstraint.constant = 0
             return
         }
-        guard let leadImageURLToRequest = WMFArticle.imageURL(forTargetImageWidth: traitCollection.wmf_leadImageWidth, fromImageSource: source, withOriginalWidth: width ?? 0) else {
+        guard let leadImageURLToRequest = WMFArticle.imageURL(forTargetImageWidth: ImageUtils.leadImageWidth(), fromImageSource: source, withOriginalWidth: width ?? 0) else {
             return
         }
         loadLeadImage(with: leadImageURLToRequest)

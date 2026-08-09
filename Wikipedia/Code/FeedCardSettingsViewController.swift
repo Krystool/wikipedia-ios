@@ -1,4 +1,6 @@
 import UIKit
+import WMFData
+import WMFNativeLocalizations
 
 private extension WMFContentGroupKind {
     var togglingFeedCardFooterText: String {
@@ -18,13 +20,17 @@ private extension WMFContentGroupKind {
         case .suggestedEdits:
             fallthrough
         case .pictureOfTheDay:
-            return WMFLocalizedString("explore-feed-preferences-global-card-footer-text", value: "This card is not language specific, turning off this card will remove it from your Explore feed.", comment: "Text describing the effects of turning off a global card")
+            return WMFDeveloperSettingsDataController.shared.isCommunityFeedMode
+                ? WMFLocalizedString("community-feed-preferences-global-card-footer-text", value: "This card is not language specific, turning off this card will remove it from your Community feed.", comment: "Text describing the effects of turning off a global card")
+                : WMFLocalizedString("explore-feed-preferences-global-card-footer-text", value: "This card is not language specific, turning off this card will remove it from your Explore feed.", comment: "Text describing the effects of turning off a global card")
         case .locationPlaceholder:
             fallthrough
         case .location:
             return WMFLocalizedString("explore-feed-preferences-show-places-footer-text", value: "Turning off the Places card will turn the card off in all available languages.", comment: "Text describing the effects of turning off the Places card")
         case .random:
             return WMFLocalizedString("explore-feed-preferences-show-randomizer-footer-text", value: "Turning off the Randomizer card will turn the card off in all available languages.", comment: "Text describing the effects of turning off the Randomizer card")
+        case .dailyGame:
+            return WMFLocalizedString("explore-feed-preferences-show-games-footer-text", value: "Turning off the Games card will turn the card off in all available languages.", comment: "Text describing the effects of turning off the Games card")
         default:
             assertionFailure("\(self) is not customizable")
             return ""

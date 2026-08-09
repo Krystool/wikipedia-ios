@@ -1,6 +1,8 @@
 import WMFComponents
 import CocoaLumberjackSwift
 import WMFData
+import WMFNativeLocalizations
+import WMFTestKitchen
 
 protocol SavedViewControllerDelegate: NSObjectProtocol {
     func savedWillShowSortAlert(_ saved: SavedViewController, from button: UIBarButtonItem)
@@ -19,10 +21,18 @@ protocol SavedViewControllerDelegate: NSObjectProtocol {
 @objc(WMFSavedViewController)
 class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring, WMFNavigationBarHiding {
 
-    private var savedArticlesViewController: SavedArticlesCollectionViewController?
-    
+    // MARK: - All Articles Coordinator
+
+    private var allArticlesCoordinator: SavedAllArticlesCoordinator?
+    private weak var allArticlesHostingController: UIViewController?
+    private var allArticlesSortType: SortActionType = .byRecentlyAdded {
+        didSet {
+            allArticlesCoordinator?.sortType = allArticlesSortType
+        }
+    }
+
     @objc weak var tabBarDelegate: AppTabBarDelegate?
-    
+
     private lazy var readingListsViewController: ReadingListsViewController? = {
         guard let dataStore = dataStore else {
             assertionFailure("dataStore is nil")
@@ -39,23 +49,23 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
     lazy var addReadingListBarButtonItem: UIBarButtonItem = {
         return SystemBarButton(with: .add, target: readingListsViewController.self, action: #selector(readingListsViewController?.presentCreateReadingListViewController))
     }()
-    
+
     fileprivate lazy var savedProgressViewController: SavedProgressViewController? = SavedProgressViewController.wmf_initialViewControllerFromClassStoryboard()
 
     public weak var savedDelegate: SavedViewControllerDelegate?
-    
+
     var topSafeAreaOverlayView: UIView?
     var topSafeAreaOverlayHeightConstraint: NSLayoutConstraint?
-    
+
     private var allArticlesSearchBarPlaceholder: String {
         WMFLocalizedString("saved-search-default-text", value:"Search saved articles", comment:"Placeholder text for the search bar in Saved. Displayed in All Articles list.")
     }
-    
+
     // Properties needed for Profile Button
-    
+
     private var _yirCoordinator: YearInReviewCoordinator?
     var yirCoordinator: YearInReviewCoordinator? {
-        
+
         guard let navigationController,
               let yirDataController,
               let dataStore else {
@@ -67,10 +77,10 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
             _yirCoordinator?.badgeDelegate = self
             return _yirCoordinator
         }
-        
+
         return existingYirCoordinator
     }
-    
+
     private lazy var tabsCoordinator: TabsOverviewCoordinator? = { [weak self] in
         guard let self, let nav = self.navigationController, let dataStore else { return nil }
         return TabsOverviewCoordinator(
@@ -82,45 +92,43 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
 
     private var _profileCoordinator: ProfileCoordinator?
     private var profileCoordinator: ProfileCoordinator? {
-        
+
         guard let navigationController,
         let yirCoordinator = self.yirCoordinator,
             let dataStore else {
             return nil
         }
-        
+
         guard let existingProfileCoordinator = _profileCoordinator else {
             _profileCoordinator = ProfileCoordinator(navigationController: navigationController, theme: theme, dataStore: dataStore, donateSouce: .savedProfile, logoutDelegate: self, sourcePage: ProfileCoordinatorSource.saved, yirCoordinator: yirCoordinator)
             _profileCoordinator?.badgeDelegate = self
             return _profileCoordinator
         }
-        
+
         return existingProfileCoordinator
     }
-    
+
     private var yirDataController: WMFYearInReviewDataController? {
         return try? WMFYearInReviewDataController()
     }
 
     // MARK: - Initalization and setup
-    
+
     @objc public var dataStore: MWKDataStore? {
         didSet {
-            guard let newValue = dataStore else {
+            guard dataStore != nil else {
                 assertionFailure("cannot set dataStore to nil")
                 return
             }
-            savedArticlesViewController = SavedArticlesCollectionViewController(with: newValue)
-            savedArticlesViewController?.delegate = self
         }
     }
-    
+
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
     }
-    
+
     // MARK: - Toggling views
-    
+
     enum View: Int {
         case savedArticles, readingLists
     }
@@ -130,21 +138,18 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
             switch currentView {
             case .savedArticles:
                 removeChild(readingListsViewController)
-                setSavedArticlesViewControllerIfNeeded()
-                addSavedChildViewController(savedArticlesViewController)
-                savedArticlesViewController?.editController.navigationDelegate = self
+                setupAllArticlesContent()
                 readingListsViewController?.editController.navigationDelegate = nil
-                savedDelegate = savedArticlesViewController
-                activeEditableCollection = savedArticlesViewController
+                savedDelegate = nil
+                activeEditableCollection = nil
                 evaluateEmptyState()
                 ReadingListsFunnel.shared.logTappedAllArticlesTab()
                 if let searchBar = navigationItem.searchController?.searchBar {
                     searchBar.placeholder = allArticlesSearchBarPlaceholder
                 }
-            case .readingLists :
-                removeChild(savedArticlesViewController)
+            case .readingLists:
+                removeAllArticlesContent()
                 addSavedChildViewController(readingListsViewController)
-                savedArticlesViewController?.editController.navigationDelegate = nil
                 readingListsViewController?.editController.navigationDelegate = self
                 savedDelegate = readingListsViewController
                 activeEditableCollection = readingListsViewController
@@ -154,7 +159,7 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
                     searchBar.placeholder = WMFLocalizedString("saved-reading-lists-search-placeholder", value: "Search reading lists", comment: "Search bar placeholder on Saved articles tab. Displayed in Reading Lists list.")
                 }
             }
-            
+
             configureNavigationBar()
         }
     }
@@ -173,7 +178,50 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
     }
 
     private var activeEditableCollection: EditableCollection?
-    
+
+    // MARK: - All Articles Content
+
+    private func setupAllArticlesContent() {
+        guard let navigationController = navigationController,
+              let dataStore = dataStore else {
+            return
+        }
+
+        // if already exists, exit early
+        guard allArticlesHostingController == nil else {
+            return
+        }
+
+        let coordinator = SavedAllArticlesCoordinator(
+            navigationController: navigationController,
+            dataStore: dataStore,
+            theme: theme
+        )
+        
+        coordinator.exitEditingModeAction = { [weak self] in
+            self?.cancelAllArticlesEditingMode()
+        }
+        
+        self.allArticlesCoordinator = coordinator
+
+        let allArticlesVC = coordinator.contentViewController
+        addChild(allArticlesVC)
+        containerView.wmf_addSubviewWithConstraintsToEdges(allArticlesVC.view)
+        allArticlesVC.didMove(toParent: self)
+        self.allArticlesHostingController = allArticlesVC
+    }
+
+    private func removeAllArticlesContent() {
+        guard let allArticlesVC = allArticlesHostingController else {
+            return
+        }
+        allArticlesVC.view.removeFromSuperview()
+        allArticlesVC.willMove(toParent: nil)
+        allArticlesVC.removeFromParent()
+        self.allArticlesHostingController = nil
+        self.allArticlesCoordinator = nil
+    }
+
     private func addSavedChildViewController(_ vc: UIViewController?) {
         guard let vc = vc else {
             return
@@ -182,7 +230,7 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
         containerView.wmf_addSubviewWithConstraintsToEdges(vc.view)
         vc.didMove(toParent: self)
     }
-    
+
     private func removeChild(_ vc: UIViewController?) {
         guard let vc = vc else {
             return
@@ -200,9 +248,9 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
             NavigationEventsFunnel.shared.logEvent(action: .savedLists)
         }
     }
-    
+
     // MARK: - View lifecycle
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -211,25 +259,44 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
         if activeEditableCollection == nil {
             currentView = .savedArticles
         }
+        
+        allArticlesSortType = getDefaultReadingListSortType() ?? .byRecentlyAdded
 
-        if let collectionView = savedArticlesViewController?.collectionView {
-            setupTopSafeAreaOverlay(scrollView: collectionView)
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self, UITraitHorizontalSizeClass.self, UITraitVerticalSizeClass.self]) { [weak self] (viewController: Self, previousTraitCollection: UITraitCollection) in
+            guard let self else { return }
+
+
+            if #available(iOS 18, *) {
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    if previousTraitCollection.horizontalSizeClass != self.traitCollection.horizontalSizeClass {
+                        self.configureNavigationBar()
+                    }
+                }
+            }
         }
     }
-    
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
-        let savedArticlesWasNil = savedArticlesViewController == nil
-        setSavedArticlesViewControllerIfNeeded()
-        if savedArticlesViewController != nil,
-            currentView == .savedArticles,
-            savedArticlesWasNil {
-            // reassign so activeEditableCollection gets reset
+
+        if currentView == .savedArticles && allArticlesHostingController == nil {
             currentView = .savedArticles
         }
-        
+
         configureNavigationBar()
+
+        if navigationItem.searchController?.isActive == true {
+            hideCustomLeadingLargeTitleLabel()
+        }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+
+        if !isMovingFromParent {
+            navigationItem.searchController?.isActive = false
+            hideCustomLeadingLargeTitleLabel()
+        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -237,18 +304,6 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
         ArticleTabsFunnel.shared.logIconImpression(interface: .saved, project: nil)
     }
 
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        
-        if #available(iOS 18, *) {
-            if UIDevice.current.userInterfaceIdiom == .pad {
-                if previousTraitCollection?.horizontalSizeClass != traitCollection.horizontalSizeClass {
-                    configureNavigationBar()
-                }
-            }
-        }
-    }
-    
     override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
 
@@ -256,39 +311,34 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
             self?.calculateTopSafeAreaOverlayHeight()
         }
     }
-    
+
+    private lazy var searchBarIPadCustomizer = SearchBarIPadCustomizer(theme: theme)
+
     private func configureNavigationBar() {
-        
-        var titleConfig: WMFNavigationBarTitleConfig = WMFNavigationBarTitleConfig(title: CommonStrings.savedTabTitle, customView: nil, alignment: .leadingCompact)
-        extendedLayoutIncludesOpaqueBars = false
-        if #available(iOS 18, *) {
-            if UIDevice.current.userInterfaceIdiom == .pad && traitCollection.horizontalSizeClass == .regular {
-                titleConfig = WMFNavigationBarTitleConfig(title: CommonStrings.savedTabTitle, customView: nil, alignment: .leadingLarge)
-                extendedLayoutIncludesOpaqueBars = true
-            }
-        }
-        
+
+        let titleConfig: WMFNavigationBarTitleConfig = WMFNavigationBarTitleConfig(title: CommonStrings.savedTabTitle, customView: nil, alignment: .customLeadingLarge)
+
         let profileButtonConfig: WMFNavigationBarProfileButtonConfig?
         let tabsButtonConfig: WMFNavigationBarTabsButtonConfig?
         if let dataStore {
-            profileButtonConfig = self.profileButtonConfig(target: self, action: #selector(userDidTapProfile), dataStore: dataStore, yirDataController: yirDataController, leadingBarButtonItem: nil)
+            profileButtonConfig = self.profileButtonConfig(target: self, action: #selector(userDidTapProfile), dataStore: dataStore, yirDataController: yirDataController)
             tabsButtonConfig = self.tabsButtonConfig(target: self, action: #selector(userDidTapTabs), dataStore: dataStore, leadingBarButtonItem: moreBarButtonItem)
         } else {
             profileButtonConfig = nil
             tabsButtonConfig = nil
         }
-        
+
         let allArticlesButtonTitle = WMFLocalizedString("saved-all-articles-title", value: "All articles", comment: "Title of the all articles button on Saved screen")
         let readingListsButtonTitle = WMFLocalizedString("saved-reading-lists-title", value: "Reading lists", comment: "Title of the reading lists button on Saved screen")
-        
-        let searchConfig = WMFNavigationBarSearchConfig(searchResultsController: nil, searchControllerDelegate: nil, searchResultsUpdater: nil, searchBarDelegate: self, searchBarPlaceholder: allArticlesSearchBarPlaceholder, showsScopeBar: true, scopeButtonTitles: [allArticlesButtonTitle, readingListsButtonTitle])
-        
+
+        let searchConfig = WMFNavigationBarSearchConfig(searchResultsController: nil, searchControllerDelegate: searchBarIPadCustomizer, searchResultsUpdater: nil, searchBarDelegate: self, searchBarPlaceholder: allArticlesSearchBarPlaceholder, showsScopeBar: true, scopeButtonTitles: [allArticlesButtonTitle, readingListsButtonTitle])
+
         var hidesNavigationBarOnScroll = true
         switch self.currentView {
         case .savedArticles:
-            if let savedArticlesViewController, savedArticlesViewController.isEmpty {
-                hidesNavigationBarOnScroll = false
-            }
+            // For SwiftUI view, we'll always allow scrolling to hide for now
+            // Could add isEmpty property to coordinator if needed
+            break
         case .readingLists:
             if let readingListsViewController, readingListsViewController.isEmpty {
                 hidesNavigationBarOnScroll = false
@@ -296,6 +346,18 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
         }
 
         configureNavigationBar(titleConfig: titleConfig, closeButtonConfig: nil, profileButtonConfig: profileButtonConfig, tabsButtonConfig: tabsButtonConfig, searchBarConfig: searchConfig, hideNavigationBarOnScroll: hidesNavigationBarOnScroll)
+        
+        searchBarIPadCustomizer.onClearTapped = { [weak self] searchController in
+            guard let self,
+            let searchBar = searchController?.searchBar else { return }
+            self.searchBar(searchBar, textDidChange: "")
+        }
+        
+        searchBarIPadCustomizer.onBackTapped = { [weak self] searchController in
+            guard let self,
+                  let searchBar = searchController?.searchBar else { return }
+            self.searchBar(searchBar, textDidChange: "")
+        }
     }
 
     @objc func userDidTapTabs() {
@@ -304,127 +366,204 @@ class SavedViewController: ThemeableViewController, WMFNavigationBarConfiguring,
     }
 
     @objc func userDidTapProfile() {
-        
+
         guard let dataStore else {
             return
         }
-        
+
         guard let languageCode = dataStore.languageLinkController.appLanguage?.languageCode,
               let metricsID = DonateCoordinator.metricsID(for: .savedProfile, languageCode: languageCode) else {
             return
         }
-        
+
         DonateFunnel.shared.logSavedProfile(metricsID: metricsID)
-              
+
         profileCoordinator?.start()
     }
     
-    private func updateProfileButton() {
+    @objc func userDidTapCancelEditingAllArticles() {
+        cancelAllArticlesEditingMode()
+    }
+    
+    private func cancelAllArticlesEditingMode() {
+        configureNavigationBar()
         
+        if allArticlesCoordinator?.contentViewController.viewModel.isEditing == true {
+            allArticlesCoordinator?.contentViewController.viewModel.toggleEditing()
+        }
+    }
+
+    private func updateProfileButton() {
+
         guard let dataStore else {
             return
         }
-        
+
         let editController: CollectionViewEditController?
         switch self.currentView {
         case .savedArticles:
-            editController = self.savedArticlesViewController?.editController
+            editController = nil // SwiftUI view handles its own editing
         case .readingLists:
             editController = self.readingListsViewController?.editController
         }
-        
-        guard let editController else {
+
+        if let editController, editController.isBatchEditing {
             return
         }
-        
-        guard !editController.isBatchEditing else {
-            return
-        }
-        
-        let config = self.profileButtonConfig(target: self, action: #selector(userDidTapProfile), dataStore: dataStore, yirDataController: yirDataController, leadingBarButtonItem: nil)
+
+        let config = self.profileButtonConfig(target: self, action: #selector(userDidTapProfile), dataStore: dataStore, yirDataController: yirDataController)
         updateNavigationBarProfileButton(needsBadge: config.needsBadge, needsBadgeLabel: CommonStrings.profileButtonBadgeTitle, noBadgeLabel: CommonStrings.profileButtonTitle)
     }
-    
-    private func setSavedArticlesViewControllerIfNeeded() {
-        if let dataStore = dataStore,
-            savedArticlesViewController == nil {
-            savedArticlesViewController = SavedArticlesCollectionViewController(with: dataStore)
-            savedArticlesViewController?.delegate = self
-            savedArticlesViewController?.apply(theme: theme)
-        }
-    }
-    
+
     private func evaluateEmptyState() {
-        if activeEditableCollection == nil {
+        if currentView == .readingLists && activeEditableCollection == nil {
             wmf_showEmptyView(of: .noSavedPages, theme: theme, frame: view.bounds)
         } else {
             wmf_hideEmptyView()
         }
     }
-    
+
     // MARK: - Themeable
-    
+
     override func apply(theme: Theme) {
         super.apply(theme: theme)
+        searchBarIPadCustomizer.theme = theme
         guard viewIfLoaded != nil else {
             return
         }
         view.backgroundColor = theme.colors.chromeBackground
-        
-        savedArticlesViewController?.apply(theme: theme)
+
         readingListsViewController?.apply(theme: theme)
         savedProgressViewController?.apply(theme: theme)
 
-        addReadingListBarButtonItem.tintColor = theme.colors.link
-        
+        addReadingListBarButtonItem.tintColor = theme.colors.warning
+
         themeNavigationBarLeadingTitleView()
+        themeNavigationBarCustomLeadingLargeTitle()
         themeTopSafeAreaOverlay()
 
         if let rightBarButtonItems = navigationItem.rightBarButtonItems {
             for barButtonItem in rightBarButtonItems {
-                barButtonItem.tintColor = theme.colors.link
+                barButtonItem.tintColor = theme.colors.primaryText
             }
         }
-        
+
         profileCoordinator?.theme = theme
         updateProfileButton()
+        allArticlesCoordinator?.theme = theme
     }
-    
+
     private lazy var moreBarButtonItem: UIBarButtonItem = {
-        let button = UIBarButtonItem(image: WMFSFSymbolIcon.for(symbol: .ellipsisCircle), primaryAction: nil, menu: overflowMenu)
+        let button = UIBarButtonItem(image: WMFSFSymbolIcon.for(symbol: .ellipsis), primaryAction: nil, menu: overflowMenu)
         button.accessibilityLabel = CommonStrings.moreButton
+        if #available(iOS 26.0, *) {
+            button.sharesBackground = false
+        }
         return button
     }()
-    
+
     var overflowMenu: UIMenu {
-        
+
         let sortAction = UIAction(title: CommonStrings.sortActionTitle, image: nil, handler: { _ in
             self.didTapSort()
         })
-        
-        let editAction = UIAction(title: CommonStrings.editContextMenuTitle, image: nil, handler: { _ in
+
+        let editAction = UIAction(title: CommonStrings.editContextMenuTitle, image: nil, handler: { [weak self] _ in
+            
+            guard let self else { return }
+            
             switch self.currentView {
             case .savedArticles:
-                self.savedArticlesViewController?.editController.changeEditingState(to: .open)
+                self.allArticlesCoordinator?.contentViewController.viewModel.toggleEditing()
+                if self.allArticlesCoordinator?.contentViewController.viewModel.isEditing == true {
+                    let cancelButton = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(self.userDidTapCancelEditingAllArticles))
+                    cancelButton.tintColor = theme.colors.primaryText
+
+                    self.navigationItem.rightBarButtonItems = [cancelButton]
+                    ReadingListsFunnel.shared.logTappedEditButton()
+                } else {
+                    self.configureNavigationBar()
+                }
             case .readingLists:
                 self.readingListsViewController?.editController.changeEditingState(to: .open)
             }
         })
-        
-        
-        let mainMenu = UIMenu(title: String(), children: [sortAction, editAction])
+
+
+        let mainMenu = UIMenu(title: String(), options: .displayInline, children: [sortAction, editAction])
 
         return mainMenu
     }
-    
+
     private lazy var fixedSpaceBarButtonItem: UIBarButtonItem = {
         let button = UIBarButtonItem(barButtonSystemItem: .fixedSpace, target: nil, action: nil)
         button.width = 20
         return button
     }()
-    
+
     func didTapSort() {
-        savedDelegate?.savedWillShowSortAlert(self, from: moreBarButtonItem)
+        switch self.currentView {
+        case .savedArticles:
+            presentAllArticlesSortAlert()
+        case .readingLists:
+            savedDelegate?.savedWillShowSortAlert(self, from: moreBarButtonItem)
+        }
+    }
+    
+    private func presentAllArticlesSortAlert() {
+        let alert = UIAlertController(title: CommonStrings.sortAlertTitle, message: nil, preferredStyle: .actionSheet)
+        
+        let titleAction = UIAlertAction(title: CommonStrings.sortAlertOptionByTitle, style: .default) { [weak self] action in
+            self?.allArticlesSortType = .byTitle
+            self?.updateDefaultReadingListSortType(sortType: .byTitle)
+            self?.allArticlesCoordinator?.contentViewController.viewModel.loadArticles()
+        }
+        alert.addAction(titleAction)
+        
+        let recentlyAddedAction = UIAlertAction(title: CommonStrings.sortAlertOptionByRecentlyAdded, style: .default) { [weak self] action in
+            self?.allArticlesSortType = .byRecentlyAdded
+            self?.updateDefaultReadingListSortType(sortType: .byRecentlyAdded)
+            self?.allArticlesCoordinator?.contentViewController.viewModel.loadArticles()
+        }
+        alert.addAction(recentlyAddedAction)
+        
+        let cancel = UIAlertAction(title: CommonStrings.cancelActionTitle, style: .cancel)
+        alert.addAction(cancel)
+        
+        if let popoverController = alert.popoverPresentationController {
+            popoverController.barButtonItem = moreBarButtonItem
+        }
+        
+        present(alert, animated: true)
+        
+        let checkedKey = "checked"
+        switch allArticlesSortType {
+        case .byRecentlyAdded:
+            recentlyAddedAction.setValue(true, forKey: checkedKey)
+        case .byTitle:
+            titleAction.setValue(true, forKey: checkedKey)
+        }
+    }
+    
+    private func getDefaultReadingListSortType() -> SortActionType? {
+        guard let readingList = dataStore?.viewContext.defaultReadingList,
+              let sortOrder = readingList.sortOrder else {
+            return nil
+        }
+        
+        return SortActionType(rawValue: sortOrder.intValue)
+    }
+    
+    private func updateDefaultReadingListSortType(sortType: SortActionType) {
+        guard let dataStore,
+              let readingList = dataStore.viewContext.defaultReadingList else {
+            return
+        }
+        
+        readingList.sortOrder = NSNumber(value: sortType.rawValue)
+        if dataStore.viewContext.hasChanges {
+            try? dataStore.viewContext.save()
+        }
     }
 }
 
@@ -434,27 +573,32 @@ extension SavedViewController: CollectionViewEditControllerNavigationDelegate {
     var currentTheme: Theme {
         return self.theme
     }
-    
+
     func didChangeEditingState(from oldEditingState: EditingState, to newEditingState: EditingState, rightBarButton: UIBarButtonItem?, leftBarButton: UIBarButtonItem?) {
+
+        // Only handle for reading lists view
+        guard currentView == .readingLists else {
+            return
+        }
 
         guard let editButton = rightBarButton else {
             return
         }
-        
+
         let moreBarButtonItem = self.moreBarButtonItem
         if newEditingState == .open {
             navigationItem.rightBarButtonItems = [editButton]
         } else {
             configureNavigationBar() // Switches back to More and Profile
         }
-        
-        moreBarButtonItem.tintColor = theme.colors.link
-        editButton.tintColor = theme.colors.link
-        
+
+        moreBarButtonItem.tintColor = theme.colors.primaryText
+        editButton.tintColor = theme.colors.primaryText
+
         let editingStates: [EditingState] = [.swiping, .open, .editing]
         let isEditing = editingStates.contains(newEditingState)
         if newEditingState == .open,
-            let batchEditToolbar = savedArticlesViewController?.editController.batchEditToolbarView,
+            let batchEditToolbar = readingListsViewController?.editController.batchEditToolbarView,
             let contentView = containerView,
             let appTabBar = tabBarDelegate?.tabBar {
                 accessibilityElements = [batchEditToolbar, contentView, appTabBar]
@@ -464,23 +608,23 @@ extension SavedViewController: CollectionViewEditControllerNavigationDelegate {
         guard isEditing else {
             return
         }
-        
+
         ReadingListsFunnel.shared.logTappedEditButton()
     }
-    
+
     func newEditingState(for currentEditingState: EditingState, fromEditBarButtonWithSystemItem systemItem: UIBarButtonItem.SystemItem) -> EditingState {
         let newEditingState: EditingState
-        
+
         switch currentEditingState {
         case .open:
             newEditingState = .closed
         default:
             newEditingState = .open
         }
-        
+
         return newEditingState
     }
-    
+
     func emptyStateDidChange(_ empty: Bool) {
         // no-op
     }
@@ -490,59 +634,51 @@ extension SavedViewController: CollectionViewEditControllerNavigationDelegate {
 
 extension SavedViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        savedDelegate?.saved(self, searchBar: searchBar, textDidChange: searchText)
+        switch currentView {
+        case .savedArticles:
+            allArticlesCoordinator?.contentViewController.viewModel.searchText = searchText
+        case .readingLists:
+            savedDelegate?.saved(self, searchBar: searchBar, textDidChange: searchText)
+        }
+        if let sc = navigationItem.searchController {
+            searchBarIPadCustomizer.updateClearButtonVisibility(text: searchText, for: sc)
+        }
     }
-    
+
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         savedDelegate?.saved(self, searchBarSearchButtonClicked: searchBar)
     }
-    
+
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
         savedDelegate?.saved(self, searchBarTextDidBeginEditing: searchBar)
+        hideCustomLeadingLargeTitleLabel()
     }
-    
+
     func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
         savedDelegate?.saved(self, searchBarTextDidEndEditing: searchBar)
+        showCustomLeadingLargeTitleLabel()
+        if currentView == .savedArticles {
+            allArticlesCoordinator?.contentViewController.viewModel.searchText = ""
+            allArticlesCoordinator?.contentViewController.viewModel.loadArticles()
+        }
     }
-    
+
     func searchBar(_ searchBar: UISearchBar, selectedScopeButtonIndexDidChange selectedScope: Int) {
+        navigationItem.searchController?.isActive = false
         if selectedScope == 0 {
             currentView = .savedArticles
         } else {
             currentView = .readingLists
         }
         logTappedView(currentView)
-        
+
         searchBar.text = nil
         savedDelegate?.saved(self, scopeBarIndexDidChange: searchBar)
     }
-    
-    // Used in ReadingListEntryCollectionViewControllerDelegate & ReadingListsViewControllerDelegate
+
+    // Used in ReadingListsViewControllerDelegate
     func scrollViewDidScroll(scrollView: UIScrollView) {
         calculateNavigationBarHiddenState(scrollView: scrollView)
-    }
-}
-
-extension SavedViewController: ReadingListEntryCollectionViewControllerDelegate {
-    func setupReadingListDetailHeaderView(_ headerView: ReadingListDetailHeaderView) {
-        assertionFailure("Unexpected")
-    }
-    
-    func readingListEntryCollectionViewController(_ viewController: ReadingListEntryCollectionViewController, didUpdate collectionView: UICollectionView) {
-    }
-    
-    func readingListEntryCollectionViewControllerDidChangeEmptyState(_ viewController: ReadingListEntryCollectionViewController) {
-        configureNavigationBar()
-    }
-    
-    func readingListEntryCollectionViewControllerDidSelectArticleURL(_ articleURL: URL, viewController: ReadingListEntryCollectionViewController) {
-        
-        guard let navigationController else {
-            return
-        }
-        
-        let coordinator = ArticleCoordinator(navigationController: navigationController, articleURL: articleURL, dataStore: dataStore ?? MWKDataStore.shared(), theme: theme, source: .undefined)
-        coordinator.start()
     }
 }
 
@@ -550,11 +686,11 @@ extension SavedViewController: ReadingListsViewControllerDelegate {
     func readingListsViewController(_ readingListsViewController: ReadingListsViewController, didAddArticles articles: [WMFArticle], to readingList: WMF.ReadingList) {
         // no-op
     }
-    
+
     func readingListsViewControllerDidChangeEmptyState(_ readingListsViewController: ReadingListsViewController, isEmpty: Bool) {
         configureNavigationBar()
     }
-    
+
 }
 
 extension SavedViewController: YearInReviewBadgeDelegate {
@@ -566,14 +702,14 @@ extension SavedViewController: YearInReviewBadgeDelegate {
 // LogoutCoordinatorDelegate
 
 extension SavedViewController: LogoutCoordinatorDelegate {
-    func didTapLogout() {
-        
+    func didTapLogout(authInstrument: InstrumentImpl) {
+
         guard let dataStore else {
             return
         }
-        
-        wmf_showKeepSavedArticlesOnDevicePanelIfNeeded(triggeredBy: .logout, theme: theme) {
-            dataStore.authenticationManager.logout(initiatedBy: .user)
+
+        wmf_showKeepSavedArticlesOnDevicePanelIfNeeded(triggeredBy: .logout, theme: theme, authInstrument: authInstrument) {
+            dataStore.authenticationManager.logout(initiatedBy: .user, authInstrument: authInstrument)
         }
     }
 }

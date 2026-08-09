@@ -1,4 +1,5 @@
 import UIKit
+import WMFNativeLocalizations
 
 // Presently it is assumed this view controller will be used only as a
 // child view controller of another view controller.
@@ -45,7 +46,7 @@ class WMFCaptchaViewController: UIViewController, UITextFieldDelegate, Themeable
     
     fileprivate var theme = Theme.standard
 
-    @objc var captcha: WMFCaptcha? {
+    var captcha: WMFCaptcha? {
         didSet {
             guard let captcha = captcha else {
                 captchaTextField.text = nil
@@ -83,7 +84,8 @@ class WMFCaptchaViewController: UIViewController, UITextFieldDelegate, Themeable
     }
     
     fileprivate func refreshImage(for captcha: WMFCaptcha) {
-        guard let fullCaptchaImageURL = fullCaptchaImageURL(from: captcha.captchaURL) else {
+        guard let captchaURL = captcha.classicInfo?.captchaURL,
+              let fullCaptchaImageURL = fullCaptchaImageURL(from: captchaURL) else {
             assertionFailure("Unable to determine fullCaptchaImageURL")
             return
         }
@@ -171,23 +173,23 @@ class WMFCaptchaViewController: UIViewController, UITextFieldDelegate, Themeable
                 
         let failure: WMFErrorHandler = {error in }
         
-        WMFAlertManager.sharedInstance.showAlert(WMFLocalizedString("account-creation-captcha-obtaining", value:"Obtaining a new CAPTCHA...", comment: "Alert shown when user wants a new captcha when creating account"), sticky: false, dismissPreviousAlerts: true, tapCallBack: nil)
+        WMFToastManager.sharedInstance.showToast(WMFLocalizedString("account-creation-captcha-obtaining", value:"Obtaining a new CAPTCHA...", comment: "Alert shown when user wants a new captcha when creating account"), sticky: false, dismissPreviousToasts: true, tapCallBack: nil)
         
         self.captchaResetter.resetCaptcha(siteURL: captchaBaseURL()!, success: { result in
             DispatchQueue.main.async {
-                guard let previousCaptcha = self.captcha else {
+                guard let previousCaptcha = self.captcha,
+                let previousCaptchaURL = previousCaptcha.classicInfo?.captchaURL else {
                     assertionFailure("If resetting a captcha, expect to have a previous one here")
                     return
                 }
                 
-                let previousCaptchaURL = previousCaptcha.captchaURL
                 let previousCaptchaNSURL = previousCaptchaURL as NSURL
                 
                 let newCaptchaID = result.index
                 
                 // Resetter only fetches captchaID, so use previous captchaURL changing its wpCaptchaId.
                 let newCaptchaURL = previousCaptchaNSURL.wmf_url(withValue: newCaptchaID, forQueryKey:"wpCaptchaId")
-                let newCaptcha = WMFCaptcha.init(captchaID: newCaptchaID, captchaURL: newCaptchaURL)
+                let newCaptcha = WMFCaptcha.init(classicInfo: WMFCaptcha.ClassicInfo(captchaID: newCaptchaID, captchaURL: newCaptchaURL), hCaptchaInfo: nil)
                 self.captcha = newCaptcha
             }
         }, failure:failure)

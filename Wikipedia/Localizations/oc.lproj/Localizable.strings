@@ -19,8 +19,6 @@
 "about-repositories" = "Referencials";
 "about-repositories-app-source-license-mit" = "Licéncia MIT";
 "about-send-feedback" = "Mandar un comentari sus l’aplicacion";
-"about-testers" = "Testaires";
-"about-testers-details" = "AQ testada per $1";
 "about-title" = "A prepaus";
 "about-translators" = "Traductors";
 "about-translators-details" = "Aquesta aplicacion es estada traduita per de traductors benevòls sus $1";
@@ -35,6 +33,7 @@
 "account-creation-passwords-mismatched" = "Los senhals son pas identics.";
 "account-creation-saving" = "Enregistrament en cors…";
 "action-add-to-reading-list-short" = "Ajustar a la lista";
+"action-discard-edits" = "Abandonar la modificacion";
 // Fuzzy
 "action-find-in-page" = "Trobar dins la pagina";
 "action-read" = "Legir";
@@ -91,11 +90,9 @@
 "forgot-password-button-title" = "Reïnicializar";
 "forgot-password-title" = "Reïnicializar lo senhal";
 "forgot-password-username-or-email-title" = "O";
-"history-clear-all" = "Escafar";
 "history-clear-delete-all" = "Òc, suprimir tot";
 "history-title" = "Istoric";
 "home-button-explore-accessibility-label" = "Wikipèdia, tornar a Explorar";
-"home-button-history-accessibility-label" = "Wikipèdia, tornar a Istoric";
 "home-button-saved-accessibility-label" = "Wikipèdia, tornar a Enregistrats";
 "home-more-like-footer" = "Mai coma $1";
 // Fuzzy
@@ -123,8 +120,10 @@
 "main-menu-zero-faq" = "FAQ de Wikipèdia Zèro";
 "move-articles-to-reading-list" = "Trasladar {{PLURAL:$1|$1 article|$1 articles}} a la lista de lectura";
 "navbar-title-mode-edit-wikitext-preview" = "Apercebut";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 pès";
 "nearby-distance-label-km" = "$1 km";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 m";
 "nearby-distance-label-miles" = "$1 millas";
 "new-password-title" = "Definir vòstre senhal";
@@ -165,9 +164,6 @@
 "settings-my-languages" = "Mas lengas";
 // Fuzzy
 "settings-notifications" = "Notificacions";
-"settings-notifications-push-notifications" = "Notificacions mandadas";
-"settings-notifications-system-turn-on" = "Activar las notificacions";
-"settings-notifications-trending" = "Tendéncias dels eveniments actuals";
 "settings-primary-language" = "Principal";
 "settings-storage-and-syncing-server-sync-title" = "Actualizar listas de lectura sincronizadas";
 "settings-title" = "Paramètres";
@@ -187,7 +183,5 @@
 "welcome-explore-continue-button" = "Començar";
 "welcome-explore-tell-me-more-done-button" = "L’obténer";
 "welcome-languages-add-button" = "Apondre una autra lenga";
-"welcome-notifications-tell-me-more-title" = "Ne saber mai sus las notificacions";
 "wikitext-upload-save" = "Publicacion en cors…";
-"wikitext-upload-save-sign-in" = "Se connectar";
 "wikitext-upload-save-terms-name" = "Condicions d'utilizacion";

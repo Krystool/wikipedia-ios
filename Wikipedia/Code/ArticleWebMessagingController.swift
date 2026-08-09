@@ -2,24 +2,24 @@ import Foundation
 import CocoaLumberjackSwift
 
 protocol ArticleWebMessageHandling: AnyObject {
-    func didRecieve(action: ArticleWebMessagingController.Action)
+    func didReceive(action: ArticleWebMessagingController.Action)
 }
 
 class ArticleWebMessagingController: NSObject {
-    
+
     fileprivate weak var webView: WKWebView?
     weak var delegate: ArticleWebMessageHandling?
-    
+
     private let bodyActionKey = "action"
     private let bodyDataKey = "data"
-    
+
     var parameters: PageContentService.Setup.Parameters?
     var contentController: WKUserContentController?
-    
+
     func setup(with webView: WKWebView, languageCode: String, theme: Theme, layoutMargins: UIEdgeInsets, leadImageHeight: CGFloat = 0, areTablesInitiallyExpanded: Bool = false, textSizeAdjustment: Int? = nil, userGroups: [String] = []) {
         let margins = getPageContentServiceMargins(from: layoutMargins)
         let textSizeAdjustment =  textSizeAdjustment ?? UserDefaults.standard.wmf_articleFontSizeMultiplier() as? Int ?? 100
-        let parameters = PageContentService.Setup.Parameters(theme: theme.webName.lowercased(), dimImages: theme.imageOpacity < 1, margins: margins, leadImageHeight: "\(leadImageHeight)px", areTablesInitiallyExpanded: areTablesInitiallyExpanded, textSizeAdjustmentPercentage: "\(textSizeAdjustment)%", userGroups: userGroups)
+        let parameters = PageContentService.Setup.Parameters(theme: theme.webName.lowercased(), dimImages: theme.isDimmed, margins: margins, leadImageHeight: "\(leadImageHeight)px", areTablesInitiallyExpanded: areTablesInitiallyExpanded, textSizeAdjustmentPercentage: "\(textSizeAdjustment)%", userGroups: userGroups)
         self.parameters = parameters
         self.webView = webView
         let contentController = webView.configuration.userContentController
@@ -28,14 +28,16 @@ class ArticleWebMessagingController: NSObject {
         do {
             try updateUserScripts(on: contentController, with: parameters)
         } catch let error {
-            WMFAlertManager.sharedInstance.showErrorAlert(error as NSError, sticky: true, dismissPreviousAlerts: false)
+            Task { @MainActor in
+                WMFToastManager.sharedInstance.showErrorAlert(error as NSError, sticky: true, dismissPreviousToasts: false)
+            }
         }
     }
-    
+
     func removeScriptMessageHandler() {
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: PageContentService.messageHandlerName)
     }
-    
+
     /// Update the scripts that run on page load. Utilize this when any parameters change.
     func updateUserScripts(on contentController: WKUserContentController, with parameters: PageContentService.Setup.Parameters) throws {
         let pcsSetup = try PageContentService.SetupScript(parameters)
@@ -47,11 +49,18 @@ class ArticleWebMessagingController: NSObject {
         contentController.addUserScript(propertiesScript)
         let utilitiesScript = PageContentService.UtilitiesScript()
         contentController.addUserScript(utilitiesScript)
-        
+
         let styleScript = PageContentService.StyleScript()
         contentController.addUserScript(styleScript)
+
+#if TEST || UITEST
+        if UserDefaults.standard.string(forKey: "WMFTestHTTPClientProfile") != nil {
+            let uiTestAccessibilityScript = PageContentService.UITestAccessibilityScript()
+            contentController.addUserScript(uiTestAccessibilityScript)
+        }
+#endif
     }
-    
+
     func addFooter(articleURL: URL, restAPIBaseURL: URL, menuItems: [PageContentService.Footer.Menu.Item], lastModified: Date?) {
         guard let title = articleURL.percentEncodedPageTitleForPathComponents else {
             return
@@ -72,11 +81,11 @@ class ArticleWebMessagingController: NSObject {
             }
         })
     }
-    
+
     // MARK: - Adjustable state
-    
+
     // MARK: PCS
-    
+
     /// Update the pageSetupSettings so that they are correct on reload
     /// Without updating these after changing settings like theme, text size, etc, the page will revert to the original settings on reload
     func updateSetupParameters() {
@@ -85,20 +94,24 @@ class ArticleWebMessagingController: NSObject {
         }
         try? updateUserScripts(on: contentController, with: parameters)
     }
-    
+
     func updateTheme(_ theme: Theme) {
         let webTheme = theme.webName.lowercased()
-        let js = "pcs.c1.Page.setTheme(pcs.c1.Themes.\(theme.webName.uppercased()))"
+        let js = """
+            pcs.c1.Page.setTheme(pcs.c1.Themes.\(theme.webName.uppercased()));
+            pcs.c1.Page.setDimImages(\(theme.isDimmed));
+            """
         webView?.evaluateJavaScript(js)
         parameters?.theme = webTheme
+        parameters?.dimImages = theme.isDimmed
         updateSetupParameters()
     }
-    
+
     func updateDarkModeMainPageIfNeeded(articleURL: URL, theme: Theme) {
         guard let title = articleURL.wmf_title, let language = articleURL.wmf_languageCode else {
             return
         }
-        
+
         if WikipediaURLTranslations.isMainpageTitle(title, in: language) {
             let js: String
             if theme.isDark {
@@ -106,7 +119,7 @@ class ArticleWebMessagingController: NSObject {
             } else {
                 js = "document.documentElement.classList.remove('skin-theme-clientpref-night');"
             }
-            
+
             webView?.evaluateJavaScript(js) { result, error in
                 if let error = error {
                     DDLogError("Error toggling class for night mode on main page: \(error)")
@@ -118,7 +131,7 @@ class ArticleWebMessagingController: NSObject {
     func getPageContentServiceMargins(from insets: UIEdgeInsets, leadImageHeight: CGFloat = 0) -> PageContentService.Setup.Parameters.Margins {
         return PageContentService.Setup.Parameters.Margins(top: "\(insets.top + leadImageHeight)px", bottom: "\(insets.bottom)px")
     }
-    
+
     func updateMargins(with layoutMargins: UIEdgeInsets, leadImageHeight: CGFloat) {
         let margins = getPageContentServiceMargins(from: layoutMargins, leadImageHeight: leadImageHeight)
         guard let marginsJSON = try? PageContentService.getJavascriptFor(margins) else {
@@ -128,7 +141,7 @@ class ArticleWebMessagingController: NSObject {
         parameters?.margins = margins
         updateSetupParameters()
     }
-    
+
     func updateTextSizeAdjustmentPercentage(_ percentage: Int) {
         let percentage = "\(percentage)%"
         let js = "pcs.c1.Page.setTextSizeAdjustmentPercentage('\(percentage)')"
@@ -136,19 +149,19 @@ class ArticleWebMessagingController: NSObject {
         parameters?.textSizeAdjustmentPercentage = percentage
         updateSetupParameters()
     }
-    
+
     func hideEditPencils() {
         let js = "pcs.c1.Page.setEditButtons(false, false)"
         webView?.evaluateJavaScript(js)
     }
-    
+
     func scrollToNewImage(filename: String) {
 
         let javascript = """
                         var imageLinkElement = document.querySelectorAll('[href="./\(filename)"]');
                         imageLinkElement[0].scrollIntoView({behavior: "smooth"});
                     """
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             self.webView?.evaluateJavaScript(javascript) { (result, error) in
                 DispatchQueue.main.async {
@@ -160,7 +173,7 @@ class ArticleWebMessagingController: NSObject {
             }
         }
     }
-    
+
     func prepareForScroll(to anchor: String, highlight: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let webView = webView else {
             completion(.failure(RequestError.invalidParameters))
@@ -175,13 +188,13 @@ class ArticleWebMessagingController: NSObject {
             }
         }
     }
-    
+
     func removeElementHighlights() {
         webView?.evaluateJavaScript("pcs.c1.Page.removeHighlightsFromHighlightedElements()")
     }
-    
+
     // MARK: iOS App Specific overrides (code in www/, built products in assets/)
-    
+
     func removeSearchTermHighlights() {
         let js = "window.wmf.findInPage.removeSearchTermHighlights()"
         webView?.evaluateJavaScript(js)
@@ -218,7 +231,7 @@ extension ArticleWebMessagingController: WKScriptMessageHandler {
         case scrollToAnchor(anchor: String, rect: CGRect)
         case unknown(href: String)
     }
-    
+
     // PCSActions are receieved from the JS bridge and converted into actions
     // Handle both _clicked and non-clicked variants in case the names change
     private enum PCSAction: String {
@@ -280,7 +293,7 @@ extension ArticleWebMessagingController: WKScriptMessageHandler {
             let height = leadImage?["height"] as? Int
             return Action.leadImage(source: source, width: width, height: height)
         }
-        
+
         func getTableOfContentsAction(with data: [String: Any]?) -> Action? {
             guard let tableOfContents = data?["tableOfContents"] as? [[String: Any]] else {
                 return nil
@@ -303,7 +316,7 @@ extension ArticleWebMessagingController: WKScriptMessageHandler {
             }
             return Action.tableOfContents(items: items)
         }
-        
+
         func getLinkAction(with data: [String: Any]?) -> Action? {
             guard let href = data?["href"] as? String else {
                 return nil
@@ -312,17 +325,17 @@ extension ArticleWebMessagingController: WKScriptMessageHandler {
             let text = data?["text"] as? String
             return .link(href: href, text: text, title: title)
         }
-        
+
         func getEditAction(with data: [String: Any]?) -> Action? {
             guard let sectionIDString = data?["sectionId"] as? String, let sectionID = Int(sectionIDString) else {
                 return nil
             }
-            
+
             let sourceString = data?["descriptionSource"] as? String
             let source = ArticleDescriptionSource.from(string: sourceString)
             return .edit(sectionID: sectionID, descriptionSource: source)
         }
-        
+
         func getImageAction(with data: [String: Any]?) -> Action? {
             guard let src = data?["src"] as? String, let href = data?["href"] as? String else {
                 return nil
@@ -331,7 +344,7 @@ extension ArticleWebMessagingController: WKScriptMessageHandler {
             let height = data?["data-file-height"] as? Int
             return .image(src: src, href: href, width: width, height: height)
         }
-        
+
         func getReferenceAction(with data: [String: Any]?) -> Action? {
             guard let selectedIndex = data?["selectedIndex"] as? Int, let groupArray = data?["referencesGroup"] as? [[String: Any]]  else {
                 return nil
@@ -339,7 +352,7 @@ extension ArticleWebMessagingController: WKScriptMessageHandler {
             let group = groupArray.compactMap { WMFLegacyReference(scriptMessageDict: $0) }
             return .reference(selectedIndex: selectedIndex, group: group)
         }
-        
+
         func getBackLinkAction(with data: [String: Any]?) -> Action? {
             guard
                 let referenceId = data?["referenceId"] as? String,
@@ -351,21 +364,21 @@ extension ArticleWebMessagingController: WKScriptMessageHandler {
             let backLinks = backLinkDictionaries.compactMap { ReferenceBackLink(scriptMessageDict: $0) }
             return .backLink(referenceId: referenceId, referenceText: referenceText, backLinks: backLinks)
         }
-        
+
         func getPronunciationAction(with data: [String: Any]?) -> Action? {
             guard let urlString = data?["url"] as? String else {
                 return nil
             }
             return .link(href: urlString, text: nil, title: nil)
         }
-        
+
         func getFooterItemAction(with data: [String: Any]?) -> Action? {
             guard let itemTypeString = data?["itemType"] as? String, let menuItemType = PageContentService.Footer.Menu.Item(rawValue: itemTypeString) else {
                 return nil
             }
             return .footerItem(type: menuItemType, payload: data?["payload"])
         }
-        
+
         func getScrollToAnchorAction(with data: [String: Any]?) -> Action? {
             guard
                 let dictionary = data?["rect"] as? [String: Any],
@@ -383,7 +396,7 @@ extension ArticleWebMessagingController: WKScriptMessageHandler {
             return .scrollToAnchor(anchor: anchor, rect: rect)
         }
     }
-    
+
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any] else {
             return
@@ -396,10 +409,10 @@ extension ArticleWebMessagingController: WKScriptMessageHandler {
             // Fallback on href for future unknown event types
             if let href = data?["href"] as? String {
                 let action = ArticleWebMessagingController.Action.unknown(href: href)
-                delegate?.didRecieve(action: action)
+                delegate?.didReceive(action: action)
             }
             return
         }
-        delegate?.didRecieve(action: action)
+        delegate?.didReceive(action: action)
     }
 }

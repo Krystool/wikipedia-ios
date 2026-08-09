@@ -143,6 +143,7 @@ NSString *const WMFNewExploreFeedPreferencesWereRejectedNotification = @"WMFNewE
         [mutableContentSources addObject:[[WMFSuggestedEditsContentSource alloc] initWithDataStore:self.dataStore]];
         
         for (NSURL *siteURL in siteURLs) {
+            [mutableContentSources addObject:[[WMFDailyGameContentSource alloc] initWithDataStore:self.dataStore siteURL:siteURL]];
             WMFFeedContentSource *feedContentSource = [[WMFFeedContentSource alloc] initWithSiteURL:siteURL
                                                                                       userDataStore:self.dataStore];
             [mutableContentSources addObjectsFromArray: @[[[WMFNearbyContentSource alloc] initWithSiteURL:siteURL  dataStore:self.dataStore],
@@ -369,6 +370,24 @@ NSString *const WMFNewExploreFeedPreferencesWereRejectedNotification = @"WMFNewE
     [self.operationQueue addOperation:op];
 }
 
+- (void)resetDailyGameContentGroups {
+    NSManagedObjectContext *moc = self.dataStore.viewContext;
+    [moc performBlock:^{
+        for (id<WMFContentSource> source in self.contentSources) {
+            if ([source isKindOfClass:[WMFDailyGameContentSource class]]) {
+                WMFDailyGameContentSource *gameSource = (WMFDailyGameContentSource *)source;
+                [gameSource removeAllContentInManagedObjectContext:moc];
+            }
+        }
+        [self save:moc];
+        
+        // Give the FRC a moment to process the delete, then reload
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            [self updateContentSource:[WMFDailyGameContentSource class] force:YES completion:nil];
+        });
+    }];
+}
+
 #pragma mark - Preferences
 
 - (void)updateExploreFeedPreferencesFromDidSaveNotification:(NSNotification *)note {
@@ -415,7 +434,7 @@ NSString *const WMFNewExploreFeedPreferencesWereRejectedNotification = @"WMFNewE
     static NSSet *customizableContentGroupKindNumbers;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        customizableContentGroupKindNumbers = [NSSet setWithArray:@[@(WMFContentGroupKindFeaturedArticle), @(WMFContentGroupKindNews), @(WMFContentGroupKindTopRead), @(WMFContentGroupKindOnThisDay), @(WMFContentGroupKindLocation), @(WMFContentGroupKindLocationPlaceholder), @(WMFContentGroupKindRandom), @(WMFContentGroupKindNotification)]];
+        customizableContentGroupKindNumbers = [NSSet setWithArray:@[@(WMFContentGroupKindFeaturedArticle), @(WMFContentGroupKindNews), @(WMFContentGroupKindTopRead), @(WMFContentGroupKindOnThisDay), @(WMFContentGroupKindLocation), @(WMFContentGroupKindLocationPlaceholder), @(WMFContentGroupKindRandom), @(WMFContentGroupKindDailyGame)]];
     });
     return customizableContentGroupKindNumbers;
 }
@@ -433,7 +452,7 @@ NSString *const WMFNewExploreFeedPreferencesWereRejectedNotification = @"WMFNewE
     static NSSet *singularGroupKindNumbers;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        singularGroupKindNumbers = [NSSet setWithArray:@[@(WMFContentGroupKindSuggestedEdits)]];
+        singularGroupKindNumbers = [NSSet setWithArray:@[@(WMFContentGroupKindSuggestedEdits), @(WMFContentGroupKindDailyGame)]];
     });
     return singularGroupKindNumbers;
 }
@@ -672,6 +691,18 @@ NSString *const WMFNewExploreFeedPreferencesWereRejectedNotification = @"WMFNewE
     [self.operationQueue addOperation:op];
 }
 
+- (void)updateDailyGameContentGroupPreviewForProjectID:(NSString *)projectID date:(NSString *)date {
+    for (id<WMFContentSource> source in self.contentSources) {
+        if ([source isKindOfClass:[WMFDailyGameContentSource class]]) {
+            WMFDailyGameContentSource *gameSource = (WMFDailyGameContentSource *)source;
+            if ([gameSource.projectID isEqualToString:projectID]) {
+                [gameSource updateContentGroupPreviewWithDate:date completionHandler:nil];
+                return;
+            }
+        }
+    }
+}
+
 - (NSInteger)countOfVisibleContentGroupKinds {
     if (self.cachedCountOfVisibleContentGroupKinds) {
         return self.cachedCountOfVisibleContentGroupKinds.integerValue;
@@ -716,11 +747,6 @@ NSString *const WMFNewExploreFeedPreferencesWereRejectedNotification = @"WMFNewE
 
         // Skip collapsed cards, let them be visible
         if (contentGroup.undoType != WMFContentGroupUndoTypeNone) {
-            continue;
-        }
-        
-        // Do not let preferences affect the notifications card
-        if (contentGroup.contentGroupKind == WMFContentGroupKindNotification) {
             continue;
         }
         

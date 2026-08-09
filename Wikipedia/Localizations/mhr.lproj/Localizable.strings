@@ -19,8 +19,6 @@
 "about-repositories-app-source-license" = "Тӱҥалтыш текстым $1 почеш кучылташ лиеш.";
 "about-repositories-app-source-license-mit" = "MIT лицензий";
 "about-send-feedback" = "Приложений нерген шоныммутым колташ";
-"about-testers" = "Тестер-влак";
-"about-testers-details" = "Сайлыкым кучаш манын, $1 тестироватлен";
 "about-title" = "Приложений нерген";
 "about-translators" = "Кусарыше-влак";
 "about-translators-details" = "Тиде приложенийым $1 сайтыште вӱмазе-влак кусареныт";
@@ -150,7 +148,6 @@
 "description-help-title" = "Статьян возен ончыктымашыже дене полыш";
 "description-help-wikidata-guide" = "Викиданныйыште возен ончыктымашым серыме дене виктарыше мут";
 "description-published-button-title" = "Ямде";
-"description-published-footer" = "Тый статья-влакым тыгак ты приложенийыште тӧрлен кертат. Вес гана йоҥылыш да изи предложений-влакым тӧрлашлан, ручка сӱретан иконкым темдал";
 "description-published-subtitle" = "Тый кызыт гына Википедийым чылалан сайрак ыштышыч";
 "description-published-title" = "Возен ончыктымаш савыкталтын!";
 "description-welcome-concise-sub-title" = "Эн сай - ик корно, кокыт гыч латкок мут марте";
@@ -220,6 +217,7 @@
 "donate-accessibility-keyboard-done-hint" = "Кок гана темдалат гын клавиатур гоч пуртымо суммо ок кой.";
 "donate-accessibility-textfield-hint" = "Кеч-могай полыш кугытым пурто.";
 "donate-accessibility-transaction-fee-hint" = "Полыш суммо дек транзакций комиссийым ешарашлан кок гана темдал.";
+// Fuzzy
 "donate-already-donated" = "Тау, шергакан полшышо! Тыйын кумыллыкет Википедий да тудын родо сайт-влаклан кушкаш полша.";
 "donate-apple-fine-print" = "Apple тиде пашалан шийвундым ок пого.";
 "donate-email-opt-in-text" = "Да,  Wikimedia Foundation жапын-жапын мыланем серышым колтен кертеш.";
@@ -249,8 +247,6 @@
 "edit-notices-always-display" = "Вашталтыш нерген шижтарымашым эре ончыктыза";
 "edit-notices-please-read" = "Порылий, тӧрлатымаш деч ончыч лудын лек";
 "edit-preview-simplified-format-message" = "Чыла контент умылаш куштылго формат дене ончыктымо.";
-"edit-published" = "Тӧрлымашым савыктыме";
-"edit-published-subtitle" = "Тый кызыт гына Википедийым чылалан сайракым ыштышыч";
 "edit-show-web-preview" = "Веб ончылгоч ончыктымашым почаш";
 "edit-summary-add-summary-text" = "Тӧрлымашын возен ончыктымашым ешараш";
 "edit-summary-choice-added-image" = "Сӱретым ешарыме";
@@ -469,12 +465,10 @@
 "forgot-password-email-sent" = "Шолыпмут вашталтыме инструкций ден серыш колтымо лийын";
 "forgot-password-title" = "Шолыпмутым кудалташ";
 "forgot-password-username-or-email-title" = "Але";
-"history-clear-all" = "Эрыкташ";
 "history-clear-confirmation-heading" = "Тый чынжымак чыла шкендын шукерте огылсо элемент-влакым кораҥдынет?";
 "history-clear-delete-all" = "Туге, чыла кораҥдаш";
 "history-title" = "Историй";
 "home-button-explore-accessibility-label" = "Википедий, тасма дек пӧртылаш";
-"home-button-history-accessibility-label" = "Википедий, историй дек пӧртылаш";
 "home-button-saved-accessibility-label" = "Википедий, аралыме дек пӧртылаш";
 "home-more-like-footer" = "$1 гай эше статья-влакым";
 "home-nearby-footer" = "Тыйын воктенет утларак вер-влак";
@@ -544,8 +538,10 @@
 "more-menu" = "Эше";
 "move-articles-to-reading-list" = "{{PLURAL:$1|$1 статьям}} лудашлан спискыш кусараш";
 "navbar-title-mode-edit-wikitext-preview" = "Ончылгоч ончымаш";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 фут.";
 "nearby-distance-label-km" = "$1 км";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 м";
 "nearby-distance-label-miles" = "$1 мил.";
 "new-password-title" = "Шолыпмутым шынде";
@@ -614,7 +610,6 @@
 "search-title" = "Кычалаш";
 "settings-account" = "Аккаунт";
 "settings-clear-cache-cancel" = "Чараш";
-"settings-storage-and-syncing-erase-saved-articles-button-title" = "Ӱшташ";
 "settings-title" = "Келыштарымаш";
 "table-of-contents-close-accessibility-hint" = "Петыраш";
 "talk-page-discussion-read-accessibility-label" = "Лудмо";
@@ -632,4 +627,3 @@
 "watchlist-filter" = "Фильтр-влак";
 "watchlist-filter-automated-contributions-options-bot" = "Бот";
 "watchlist-filter-automated-contributions-options-human" = "Айдеме (бот огыл)";
-"wikitext-upload-save-sign-in" = "Пураш";

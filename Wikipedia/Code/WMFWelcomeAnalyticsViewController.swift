@@ -1,4 +1,5 @@
 import WMFComponents
+import WMFNativeLocalizations
 
 class WMFWelcomeAnalyticsViewController: ThemeableViewController {
 
@@ -7,6 +8,8 @@ class WMFWelcomeAnalyticsViewController: ThemeableViewController {
         guard viewIfLoaded != nil else {
             return
         }
+        view.backgroundColor = .clear
+        descriptionLabel.textColor = theme.colors.secondaryText
         learnMoreButton.setTitleColor(theme.colors.link, for: .normal)
     }
 
@@ -15,21 +18,23 @@ class WMFWelcomeAnalyticsViewController: ThemeableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.accessibilityIdentifier = AccessibilityIdentifiers.Onboarding.analyticsView
 
         descriptionLabel.text = WMFLocalizedString("welcome-privacy-subtitle", value:"We believe that you should not have to provide personal information to participate in the free knowledge movement. Usage data collected for this app is anonymous.", comment:"Sub-title explaining how data usage is anonymous")
 
         learnMoreButton.setTitle(WMFLocalizedString("welcome-privacy-terms-button-text", value:"Learn more about our privacy policy and terms of use", comment:"Text for links for learning more about data privacy policy and terms of use"), for: .normal)
+        learnMoreButton.accessibilityIdentifier = AccessibilityIdentifiers.Onboarding.analyticsLearnMoreButton
         updateFonts()
         view.wmf_configureSubviewsForDynamicType()
-    }
-
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        updateFonts()
+        
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self, UITraitHorizontalSizeClass.self, UITraitVerticalSizeClass.self]) { [weak self] (viewController: Self, previousTraitCollection: UITraitCollection) in
+            guard let self else { return }
+            self.updateFonts()
+        }
     }
 
     private func updateFonts() {
-        learnMoreButton.titleLabel?.font = WMFFont.for(.mediumFootnote, compatibleWith: traitCollection)
+        learnMoreButton.titleLabel?.font = WMFFont.for(.callout, compatibleWith: traitCollection)
     }
 
     @IBAction func showPrivacyAndTermsActionSheet(_ sender: AnyObject) {

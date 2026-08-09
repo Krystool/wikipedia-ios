@@ -9,7 +9,7 @@
     }
   ],
   "defaultOptions" : {
-    "codeCoverage" : false,
+    "codeCoverage" : true,
     "environmentVariableEntries" : [
       {
         "enabled" : false,
@@ -35,7 +35,6 @@
         "ArticleCacheReadingManualTests",
         "ArticleManualPerformanceTests",
         "ArticleViewControllerTests",
-        "LegacyCoreDataMigratorTests",
         "MWKHistoryListPerformanceTests\/testReadPerformance",
         "NSArray_PredicateTests\/testPerformance",
         "NSString_FormattedAttributedStringTests\/testPerformanceExample",

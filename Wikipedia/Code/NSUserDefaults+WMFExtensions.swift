@@ -1,3 +1,6 @@
+import WMFNativeLocalizations
+import WMFData
+
 let WMFAppResignActiveDateKey = "WMFAppResignActiveDateKey"
 let WMFShouldRestoreNavigationStackOnResume = "WMFShouldRestoreNavigationStackOnResume"
 let WMFAppSiteKey = "Domain"
@@ -23,7 +26,7 @@ let WMFDidShowTitleDescriptionEditingIntro = "WMFDidShowTitleDescriptionEditingI
 let WMFDidShowFirstEditPublishedPanelKey = "WMFDidShowFirstEditPublishedPanelKey"
 let WMFIsSyntaxHighlightingEnabled = "WMFIsSyntaxHighlightingEnabled"
 let WMFSearchLanguageKey = "WMFSearchLanguageKey"
-let WMFAppInstallId = "WMFAppInstallId"
+public let WMFAppInstallId = "WMFAppInstallId"
 let WMFSendUsageReports = "WMFSendUsageReports"
 let WMFShowNotificationsExploreFeedCard = "WMFShowNotificationsExploreFeedCard"
 let WMFUserHasOnboardedToNotificationsCenter = "WMFUserHasOnboardedToNotificationsCenter"
@@ -37,8 +40,6 @@ public let WMFAlwaysDisplayEditNotices = "WMFAlwaysDisplayEditNotices"
 let WMFSessionBackgroundDate =  "WMFSessionBackgroundDate"
 let WMFSessionStartDate =  "WMFSessionStartDate"
 let WMFYearToSessionSecondsMapping =  "WMFYearToSessionSecondsMapping"
-let WMFYiRSettingsToggleIsEnabled = "WMFYiRSettingsToggleIsEnabled"
-let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
 
 @objc public enum WMFAppDefaultTabType: Int {
     case explore
@@ -47,13 +48,13 @@ let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
 
 @objc public extension UserDefaults {
     @objc(WMFUserDefaultsKey) class Key: NSObject {
-        @objc static let defaultTabType = "WMFDefaultTabTypeKey"
+        @objc public static let defaultTabType = "WMFDefaultTabTypeKey"
         static let isUserUnawareOfLogout = "WMFIsUserUnawareOfLogout"
         static let didShowDescriptionPublishedPanel = "WMFDidShowDescriptionPublishedPanel"
         static let didShowEditingOnboarding = "WMFDidShowEditingOnboarding"
         static let didShowInformationEditingMessage = "WMFdDidShowInformationEditingMessage"
         static let isDifferentErrorBannerShown = "WMFIsDifferentErrorBannerShown"
-        static let autoSignTalkPageDiscussions = "WMFAutoSignTalkPageDiscussions"
+        static let legacyAutoSignTalkPageDiscussions = "WMFAutoSignTalkPageDiscussions"
         static let talkPageForceRefreshRevisionIDs = "WMFTalkPageForceRefreshRevisionIDs"
     }
 
@@ -91,6 +92,7 @@ let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
         }
     }
     
+    // Deprecated. Prefer try? WMFDataEnvironment.current.crossProcessUserDefaultsStore?.load(key: WMFUserDefaultsKey.appInstallID.rawValue)
     @objc var wmf_appInstallId: String? {
         get {
             var appInstallId = string(forKey: WMFAppInstallId)
@@ -247,25 +249,13 @@ let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
     @objc func wmf_exploreDidPromptForLocationAuthorization() -> Bool {
         return self.bool(forKey: WMFExploreDidPromptForLocationAuthorization)
     }
-
-    @objc func wmf_setShowSearchLanguageBar(_ enabled: Bool) {
-        self.set(NSNumber(value: enabled as Bool), forKey: "ShowLanguageBar")
-    }
     
-    @objc func wmf_showSearchLanguageBar() -> Bool {
-        if let enabled = self.object(forKey: "ShowLanguageBar") as? NSNumber {
-            return enabled.boolValue
-        } else {
-            return false
-        }
-    }
-
-    @objc var wmf_openAppOnSearchTab: Bool {
+    @objc var wmf_showActivityTab: Bool {
         get {
-            return bool(forKey: "WMFOpenAppOnSearchTab")
+            return bool(forKey: "developer-settings-show-activity-tab")
         }
         set {
-            set(newValue, forKey: "WMFOpenAppOnSearchTab")
+            set(newValue, forKey: "developer-settings-show-activity-tab")
         }
     }
     
@@ -283,26 +273,6 @@ let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
     
     @objc func wmf_setDidShowWIconPopover(_ shown: Bool) {
         self.set(NSNumber(value: shown as Bool), forKey: "ShowWIconPopover")
-    }
-    
-    @objc func wmf_didShowWIconPopover() -> Bool {
-        if let enabled = self.object(forKey: "ShowWIconPopover") as? NSNumber {
-            return enabled.boolValue
-        } else {
-            return false
-        }
-    }
-    
-    @objc func wmf_setDidShowMoreLanguagesTooltip(_ shown: Bool) {
-        self.set(NSNumber(value: shown as Bool), forKey: "ShowMoreLanguagesTooltip")
-    }
-    
-    @objc func wmf_didShowMoreLanguagesTooltip() -> Bool {
-        if let enabled = self.object(forKey: "ShowMoreLanguagesTooltip") as? NSNumber {
-            return enabled.boolValue
-        } else {
-            return false
-        }
     }
 
     @objc func wmf_setTableOfContentsIsVisibleInline(_ visibleInline: Bool) {
@@ -400,7 +370,9 @@ let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
         }
         set {
             set(newValue.rawValue, forKey: UserDefaults.Key.defaultTabType)
-            wmf_openAppOnSearchTab = newValue == .settings
+            Task {
+                await WMFSettingsDataController.shared.setOpenAppOnSearchTab(newValue == .settings)
+            }
         }
     }
     
@@ -492,15 +464,6 @@ let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
             set(newValue, forKey: UserDefaults.Key.didShowInformationEditingMessage)
         }
     }
-
-    var autoSignTalkPageDiscussions: Bool {
-        get {
-            return bool(forKey: UserDefaults.Key.autoSignTalkPageDiscussions)
-        }
-        set {
-            set(newValue, forKey: UserDefaults.Key.autoSignTalkPageDiscussions)
-        }
-    }
     
     private var systemDarkModeEnabled: Bool {
         get {
@@ -508,15 +471,6 @@ let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
         }
         set {
             set(newValue, forKey: "SystemDarkMode")
-        }
-    }
-    
-    @objc var wmf_shouldShowNotificationsExploreFeedCard: Bool {
-        get {
-           return bool(forKey: WMFShowNotificationsExploreFeedCard)
-        }
-        set {
-            set(newValue, forKey: WMFShowNotificationsExploreFeedCard)
         }
     }
     
@@ -559,6 +513,7 @@ let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
         }
     }
 
+    // Deprecated. Prefer try? WMFDataEnvironment.current.crossProcessUserDefaultsStore?.load(key: WMFUserDefaultsKey.sessionID.rawValue)
     @objc var wmf_sessionID: String? {
         get {
             return string(forKey: "WMFSessionID")
@@ -575,25 +530,5 @@ let WMFYiRSettingsToggleShouldShow = "WMFYiRSettingsToggleShouldShow"
         set {
             set(newValue, forKey: WMFYearToSessionSecondsMapping)
         }
-    }
-
-    @objc var wmf_yirSettingToggleIsEnabled: Bool {
-        get {
-            if object(forKey: WMFYiRSettingsToggleIsEnabled) == nil {
-                return true
-            }
-            return bool(forKey: WMFYiRSettingsToggleIsEnabled)
-        }
-        set {
-            set(newValue, forKey: WMFYiRSettingsToggleIsEnabled)
-        }
-    }
-
-    @objc var wmf_yirSettingToggleShouldShow: Bool {
-        return bool(forKey: WMFYiRSettingsToggleShouldShow)
-    }
-
-    @objc func wmf_setShowYirSettingToggle(_ enabled: Bool) {
-        self.set(NSNumber(value: enabled as Bool), forKey: WMFYiRSettingsToggleShouldShow)
     }
 }

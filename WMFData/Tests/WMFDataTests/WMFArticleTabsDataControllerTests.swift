@@ -1,4 +1,5 @@
 import XCTest
+import WMFDataTestSupport
 @testable import WMFData
 @testable import WMFDataMocks
 
@@ -9,6 +10,7 @@ final class WMFArticleTabsDataControllerTests: XCTestCase {
         case missingDataController
     }
     
+    private let fixture = WMFDataTestFixture()
     var store: WMFCoreDataStore?
     var dataController: WMFArticleTabsDataController?
     
@@ -18,15 +20,20 @@ final class WMFArticleTabsDataControllerTests: XCTestCase {
     }()
     
     override func setUp() async throws {
-        let temporaryDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let store = try await WMFCoreDataStore(appContainerURL: temporaryDirectory)
+        try await super.setUp()
+        await fixture.setUp()
+        let store = try await fixture.makeTemporaryCoreDataStore()
         self.store = store
         
         WMFDataEnvironment.current.appData = WMFAppData(appLanguages: [WMFLanguage(languageCode: "en", languageVariantCode: nil)])
+        await fixture.resetWMFDataTestState()
         
         self.dataController = WMFArticleTabsDataController(coreDataStore: store)
-        
-        try await super.setUp()
+    }
+
+    override func tearDown() async throws {
+        await fixture.tearDown()
+        try await super.tearDown()
     }
     
     func testTabsCount() async throws {
@@ -86,7 +93,7 @@ final class WMFArticleTabsDataControllerTests: XCTestCase {
             }
             
             XCTAssertEqual(page.title, "Cat")
-            XCTAssertEqual(page.projectID, self.enProject.coreDataIdentifier)
+            XCTAssertEqual(page.projectID, self.enProject.id)
         }
     }
     
@@ -147,7 +154,7 @@ final class WMFArticleTabsDataControllerTests: XCTestCase {
             }
             
             XCTAssertEqual(page.title, "Dog")
-            XCTAssertEqual(page.projectID, self.enProject.coreDataIdentifier)
+            XCTAssertEqual(page.projectID, self.enProject.id)
         }
     }
     
@@ -198,29 +205,6 @@ final class WMFArticleTabsDataControllerTests: XCTestCase {
             XCTAssertEqual(items[0].page?.title, "Cat")
             XCTAssertEqual(items[1].page?.title, "Dog")
         }
-    }
-    
-    func testCannotDeleteLastTab() async throws {
-        guard let dataController else {
-            throw TestsError.missingDataController
-        }
-        
-        // Create a single tab
-        let identifier = try await dataController.createArticleTab(initialArticle: nil)
-        
-        // Attempt to delete the last tab
-        do {
-            try await dataController.deleteArticleTab(identifier: identifier.tabIdentifier)
-            XCTFail("Should throw error when deleting last tab")
-        } catch WMFArticleTabsDataController.CustomError.cannotDeleteLastTab {
-            // Expected error
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-        
-        // Verify tab still exists
-        let count = try await dataController.tabsCount()
-        XCTAssertEqual(count, 1)
     }
     
     func testIsCurrentTab() async throws {

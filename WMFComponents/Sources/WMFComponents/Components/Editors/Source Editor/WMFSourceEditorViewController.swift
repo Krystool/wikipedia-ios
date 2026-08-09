@@ -157,8 +157,8 @@ public class WMFSourceEditorViewController: WMFComponentViewController {
         NSLayoutConstraint.activate([
             view.safeAreaLayoutGuide.leadingAnchor.constraint(equalTo: textView.leadingAnchor),
             view.safeAreaLayoutGuide.trailingAnchor.constraint(equalTo: textView.trailingAnchor),
-            view.safeAreaLayoutGuide.topAnchor.constraint(equalTo: textView.topAnchor),
-            view.safeAreaLayoutGuide.bottomAnchor.constraint(equalTo: textView.bottomAnchor)
+            view.topAnchor.constraint(equalTo: textView.topAnchor),
+            view.bottomAnchor.constraint(equalTo: textView.bottomAnchor)
         ])
         
         NotificationCenter.default.addObserver(self,
@@ -212,11 +212,9 @@ public class WMFSourceEditorViewController: WMFComponentViewController {
         textView.isSelectable = true
         textView.becomeFirstResponder()
         
-        if let currentRange = textFrameworkMediator.findAndReplaceFormatter?.selectedMatchRange,
-           currentRange.location != NSNotFound {
+        if let currentRange = textFrameworkMediator.findAndReplaceFormatter?.selectedMatchRange {
             textView.selectedRange = currentRange
-        } else if let lastReplacedRange = textFrameworkMediator.findAndReplaceFormatter?.lastReplacedRange,
-                  lastReplacedRange.location != NSNotFound {
+        } else if let lastReplacedRange = textFrameworkMediator.findAndReplaceFormatter?.lastReplacedRange {
             textView.selectedRange = lastReplacedRange
         } else {
             if let visibleRange = textView.visibleRange {
@@ -374,8 +372,8 @@ private extension WMFSourceEditorViewController {
             return
         }
         
-        if findFormatter.selectedMatchIndex != NSNotFound {
-            let selectedMatch = findFormatter.selectedMatchIndex + 1
+        if let selectedIndex = findFormatter.selectedMatchIndex {
+            let selectedMatch = selectedIndex + 1
             let totalMatchCount = findFormatter.matchCount
             viewModel.currentMatchInfo = "\(selectedMatch) / \(totalMatchCount)"
             viewModel.currentMatchInfoAccessibility = String.localizedStringWithFormat(WMFSourceEditorLocalizedStrings.current.findCurrentMatchInfoFormatAccessibility, "\(totalMatchCount)", "\(selectedMatch)")
@@ -707,9 +705,6 @@ extension WMFSourceEditorViewController: WMFSourceEditorFindAndReplaceScrollDele
     
     func scrollToCurrentMatch() {
         guard let matchRange = textFrameworkMediator.findAndReplaceFormatter?.selectedMatchRange else {
-            return
-        }
-        guard matchRange.location != NSNotFound else {
             return
         }
         

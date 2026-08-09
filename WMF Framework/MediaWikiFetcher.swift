@@ -1,5 +1,6 @@
 import Foundation
 import WMFData
+import WMFNativeLocalizations
 
 private extension WMFMediaWikiServiceRequest.TokenType {
     var wmfTokenType: TokenType {
@@ -182,5 +183,9 @@ public final class MediaWikiFetcher: Fetcher, WMFService {
     public func performDecodablePOST<R, T>(request: R, completion: @escaping (Result<T, Error>) -> Void) where R : WMFData.WMFServiceRequest, T : Decodable {
         assertionFailure("Not implemented")
         completion(.failure(MediaWikiFetcherError.invalidRequest))
+    }
+    
+    public func clearCachedData() {
+        session.clearTemporaryCache()
     }
 }

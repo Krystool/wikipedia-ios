@@ -21,8 +21,6 @@
 "about-repositories-app-source-license" = "സ്രോതസ്സ് കോഡ് $1 പ്രകാരം ലഭ്യമാണ്.";
 "about-repositories-app-source-license-mit" = "എം.ഐ.റ്റി. ഉപയോഗാനുമതി";
 "about-send-feedback" = "ആപിനെക്കുറിച്ചുള്ള അഭിപ്രായം അറിയിക്കുക";
-"about-testers" = "പരീക്ഷകർ";
-"about-testers-details" = "ഗുണമേന്മ $1 പരിശോധിച്ചു";
 "about-title" = "വിവരണം";
 "about-translators" = "വിവർത്തകർ";
 "about-translators-details" = "പരിഭാഷപ്പെടുത്തിയത് $1 സന്നന്ധപ്രവർത്തകരാണ്";
@@ -123,8 +121,6 @@
 "edit-link-title" = "കണ്ണി തിരുത്തുക";
 "edit-menu-item" = "തിരുത്തുക";
 "edit-minor-text" = "ഇതൊരു ചെറിയ തിരുത്താണ്";
-"edit-published" = "തിരുത്ത് പ്രസിദ്ധീകരിച്ചു";
-"edit-published-subtitle" = "എല്ലാവർക്കുംവേണ്ടി താങ്കൾ വിക്കിപീഡിയ കൂടുതൽ മെച്ചപ്പെടുത്തി";
 "edit-summary-add-summary-text" = "ഒരു തിരുത്തൽ സാരാംശം ചേർക്കുക";
 "edit-summary-choice-fixed-grammar" = "വ്യാകരണം ശരിയാക്കി";
 "edit-summary-choice-fixed-typos" = "അക്ഷരപിശക് തിരുത്തി";
@@ -182,7 +178,6 @@
 "find-infolabel-number-matches" = "$1 / $2";
 "find-textfield-accessibility" = "കണ്ടെത്തുക";
 "forgot-password-button-title" = "പുനഃക്രമീകരിക്കുക";
-"history-clear-all" = "ശൂന്യമാക്കുക";
 "history-clear-delete-all" = "അതെ, എല്ലാം മായ്ക്കുക";
 "main-menu-about" = "ആപ്പിനെപ്പറ്റി";
 "main-menu-account-login" = "പ്രവേശിക്കുക";
@@ -219,5 +214,4 @@
 "wikitext-upload-result-unknown" = "വിക്കി എഴുത്ത് അപ്‌ലോഡിന്റെ ഫലം നിർണ്ണയിക്കാൻ കഴിഞ്ഞില്ല.";
 "wikitext-upload-save" = "പ്രസിദ്ധീകരിക്കുന്നു...";
 "wikitext-upload-save-anonymously-warning" = "താങ്കളുടെ തിരുത്തുകൾ താങ്കളുടെ ഐ.പി. വിലാസവുമായി ചേർത്തിരിക്കും. താങ്കൾ $1 ആണെങ്കിൽ കൂടുതൽ സ്വകാര്യത ഉണ്ടാകുന്നതാണ്.";
-"wikitext-upload-save-sign-in" = "പ്രവേശിക്കുക";
 "wikitext-upload-save-terms-name" = "ഉപയോഗനിബന്ധനകൾ";

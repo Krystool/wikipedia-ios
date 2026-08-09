@@ -10,8 +10,8 @@ final internal class NavigationEventsFunnel: NSObject {
         case saved
         case savedAll = "saved_all"
         case savedLists = "saved_lists"
-        case history
         case search
+        case activityTab = "activity_tab"
         case settingsOpenNav = "setting_open_nav"
         case settingsOpenExplore = "setting_open_explore"
         case settingsAccount = "setting_account"
@@ -64,8 +64,8 @@ final internal class NavigationEventsFunnel: NSObject {
             logEvent(action: .saved)
         }
 
-        @objc func logTappedHistory() {
-            logEvent(action: .history)
+        @objc func logTappedActivityTab() {
+            logEvent(action: .activityTab)
         }
 
         @objc func logTappedSearch() {

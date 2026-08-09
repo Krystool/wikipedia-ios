@@ -1,6 +1,7 @@
 import Foundation
 import SystemConfiguration
 import WMFComponents
+import WMFNativeLocalizations
 
 public extension UIColor {
     @objc(initWithHexInteger:alpha:)
@@ -802,6 +803,28 @@ public class Colors: NSObject {
         }
     }
     
+    public var navigationBarTintColor: UIColor {
+        switch identifier {
+        case .light, .sepia:
+            return WMFColor.blue600
+        case .dark, .black:
+            return WMFColor.blue300
+        default:
+            return .clear
+        }
+    }
+    
+    public var logoTintColor: UIColor {
+        switch identifier {
+        case .light, .sepia:
+            return WMFColor.black
+        case .dark, .black:
+            return WMFColor.white
+        default:
+            return .clear
+        }
+    }
+    
     init(identifier: Identifier) {
         self.identifier = identifier
     }
@@ -896,6 +919,10 @@ public class Theme: NSObject {
         return [NSAttributedString.Key.foregroundColor: colors.chromeText]
     }()
     
+    public var isDimmed: Bool {
+        return imageOpacity < 1
+    }
+
     public static let dimmedImageOpacity: CGFloat = 0.65
     @objc public let imageOpacity: CGFloat
     @objc public let cardBorderWidthInPixels: Int

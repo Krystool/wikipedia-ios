@@ -48,7 +48,7 @@ import Foundation
         return await preferencesBannerOptIns.getValue(forKey: project) ?? true
     }
     
-    /// Set asset as "maybe later" in persistence, so that it can me loaded later only once the maybe later date has passed
+    /// Set asset as "maybe later" in persistence, so that it can be loaded later only once the maybe later date has passed
     /// - Parameters:
     ///   - asset: WMFAsset to mark as maybe later
     ///   - currentDate: Current date, sent in as a parameter for stable unit testing.
@@ -220,11 +220,15 @@ import Foundation
         mediaWikiService.perform(request: request, completion: completion)
     }
     
-    // MARK: - Internal
-    
-    func reset() {
+    // MARK: - Testing
+
+    @_spi(Testing) public func reset() {
+        service = WMFDataEnvironment.current.basicService
+        mediaWikiService = WMFDataEnvironment.current.mediaWikiService
+        sharedCacheStore = WMFDataEnvironment.current.sharedCacheStore
         activeCountryConfigs = []
         promptState = nil
+        preferencesBannerOptIns = SafeDictionary<WMFProject, Bool>()
     }
     
     // MARK: - Private
@@ -338,7 +342,7 @@ import Foundation
 
                 let actions: [WMFFundraisingCampaignConfig.WMFAsset.WMFAction] = randomAsset.actions.map { action in
                     
-                    guard let urlString = action.urlString?.replacingOccurrences(of: "$platform;", with: "iOS"),
+                    guard let urlString = action.urlString,
                        let url = URL(string: urlString) else {
                         return WMFFundraisingCampaignConfig.WMFAsset.WMFAction(title: action.title, url: nil)
                     }
@@ -460,7 +464,7 @@ private struct WMFFundraisingCampaignConfigResponse: Codable {
         }
     }
     
-    static var currentVersion = 2
+    static let currentVersion = 3
     let configs: [FundraisingCampaignConfig]
     
     init(from decoder: Decoder) throws {

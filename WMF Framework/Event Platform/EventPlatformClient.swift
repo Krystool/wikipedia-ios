@@ -39,6 +39,7 @@
 import Foundation
 import CocoaLumberjackSwift
 import WMFData
+import WMFTestKitchen
 
 /**
  * Event Platform Client (EPC)
@@ -64,10 +65,10 @@ import WMFData
 
     let dataStore = MWKDataStore.shared()
     let samplingController: SamplingController
-    let storageManager: StorageManager?
+    public let storageManager: StorageManager?
     let userSession = UserSession.shared
 
-    var sessionID: String {
+    public var sessionID: String {
         return userSession.sessionID
     }
     
@@ -135,6 +136,9 @@ import WMFData
         case imageRecommendation = "android.image_recommendation_event"
         case articleLinkInteraction = "ios.article_link_interaction"
         case appTabsInteraction = "app_tabs_interaction"
+        case appActivityTab = "app_activity_tab"
+        case productMetricsAppBase = "product_metrics.app_base"
+        case clientError = "mediawiki.client.error"
     }
     
     /**
@@ -155,13 +159,14 @@ import WMFData
         case search = "/analytics/mobile_apps/ios_search/2.3.1"
         case sessions = "/analytics/mobile_apps/app_session/1.1.0"
         case settings = "/analytics/mobile_apps/ios_setting_action/1.1.0"
-        case login = "/analytics/mobile_apps/ios_login_action/1.1.0"
-        case navigation = "/analytics/mobile_apps/ios_navigation_events/1.1.0"
+        case login = "/analytics/mobile_apps/ios_login_action/1.1.2"
+        case navigation = "/analytics/mobile_apps/ios_navigation_events/1.1.1"
         case editAttempt = "/analytics/legacy/editattemptstep/2.0.3"
         case watchlist = "/analytics/mobile_apps/ios_watchlists/4.1.0"
         case appInteraction = "/analytics/mobile_apps/app_interaction/1.1.0"
         case imageRecommendation = "/analytics/mobile_apps/android_image_recommendation_event/1.1.0"
         case articleLinkInteraction = "/analytics/mobile_apps/ios_article_link_interaction/2.0.0"
+        case clientError = "/mediawiki/client/error/2.0.0"
     }
 
     /**
@@ -183,11 +188,19 @@ import WMFData
      * **eventgate-analytics-external**.  This service uses the stream
      * configurations from Meta wiki as its source of truth.
      */
-    private static var eventIntakeURI: URL {
+    private static var analyticsEventIntakeURI: URL {
         if WMFDeveloperSettingsDataController.shared.sendAnalyticsToWMFLabs {
             URL(string: "https://intake-analytics-beta.wmflabs.org/v1/events")!
         } else {
             URL(string: "https://intake-analytics.wikimedia.org/v1/events")!
+        }
+    }
+
+    private static var loggingEventIntakeURI: URL {
+        if WMFDeveloperSettingsDataController.shared.sendAnalyticsToWMFLabs {
+            URL(string: "https://intake-logging-beta.wmflabs.org/v1/events")!
+        } else {
+            URL(string: "https://intake-logging.wikimedia.org/v1/events")!
         }
     }
 
@@ -207,12 +220,13 @@ import WMFData
      * be "eventgate-analytics-external" (to filter out irrelevant streams from
      * the returned list of stream configurations).
      */
-    private static let streamConfigsURI = URL(string: "https://meta.wikimedia.org/w/api.php?action=streamconfigs&format=json&constraints=destination_event_service=eventgate-analytics-external")!
+    private static let streamConfigsURI = URL(string: "https://meta.wikimedia.org/w/api.php?action=streamconfigs&format=json")!
 
     /**
      * An individual stream's configuration.
      */
     struct StreamConfiguration: Codable {
+        let destination_event_service: String?
         let sampling: Sampling?
         struct Sampling: Codable {
             let rate: Double?
@@ -346,6 +360,9 @@ import WMFData
                 result?[stream] = kv.value
             })
 
+            // Forward raw stream configs to TestKitchenClient
+            forwardStreamConfigsToTestKitchen(data)
+
             // Process event buffer after making stream configs available
             // NOTE: If any event is re-submitted while streamConfigurations
             // is still being set (asynchronously), they will just go back to
@@ -361,6 +378,68 @@ import WMFData
             }
         } catch let error {
             DDLogError("EPC: Problem processing JSON payload from response: \(error)")
+        }
+    }
+
+    private func forwardStreamConfigsToTestKitchen(_ data: Data) {
+        struct StreamsWrapper: Codable {
+            let streams: [String: WMFTestKitchen.StreamConfig]
+        }
+        do {
+            let wrapper = try JSONDecoder().decode(StreamsWrapper.self, from: data)
+            let sourceConfig = SourceConfig(streamConfigs: wrapper.streams)
+            TestKitchenAdapter.shared.client.updateSourceConfig(sourceConfig)
+        } catch {
+            DDLogDebug("EPC: Could not forward stream configs to TestKitchen: \(error)")
+        }
+    }
+
+    /**
+     * Flushes all stored events to the server immediately.
+     *
+     * Call this from app extensions (e.g. widget extensions) before invoking the extension's
+     * completion handler so the process stays alive until the network round-trip finishes.
+     */
+    public func flushStoredEvents(completion: (() -> Void)? = nil) {
+        guard let storageManager = self.storageManager else {
+            completion?()
+            return
+        }
+
+        let events = storageManager.popAll()
+        guard !events.isEmpty else {
+            completion?()
+            return
+        }
+
+        let group = DispatchGroup()
+
+        for event in events {
+            group.enter()
+            
+            var uri = EventPlatformClient.analyticsEventIntakeURI
+            if streamConfigurations?[event.stream]?.destination_event_service == "eventgate-logging-external" {
+                uri = EventPlatformClient.loggingEventIntakeURI
+            }
+            
+            httpPost(url: uri, body: event.data) { [weak storageManager] result in
+                defer { group.leave() }
+                switch result {
+                case .success:
+                    storageManager?.markPurgeable(event: event)
+                case .failure(let error):
+                    switch error {
+                    case .networkingLibraryError:
+                        break // leave in store to retry
+                    default:
+                        storageManager?.markPurgeable(event: event)
+                    }
+                }
+            }
+        }
+
+        group.notify(queue: queue) {
+            completion?()
         }
     }
 
@@ -384,7 +463,17 @@ import WMFData
         let group = DispatchGroup()
         for event in events {
             group.enter()
-            httpPost(url: EventPlatformClient.eventIntakeURI, body: event.data) { result in
+
+            var uri = EventPlatformClient.analyticsEventIntakeURI
+            if streamConfigurations?[event.stream]?.destination_event_service == "eventgate-logging-external" {
+                uri = EventPlatformClient.loggingEventIntakeURI
+            }
+            
+            #if !DEBUG
+            uri.append(queryItems: [URLQueryItem(name: "hasty", value: "true")])
+            #endif
+
+            httpPost(url: uri, body: event.data) { result in
                 switch result {
                 case .success:
                     storageManager.markPurgeable(event: event)
@@ -428,15 +517,6 @@ import WMFData
         var meta: Meta
 
         /**
-         * The top-level field `dt` is for recording the time the event
-         * was generated. EventGate sets `meta.dt` during ingestion, so for
-         * analytics events that field is used as "timestamp of reception" and
-         * is used for partitioning the events in the database. See Phab:T240460
-         * for more information.
-         */
-        let dt: Date
-        
-        /**
          * Event represents the client-provided event data.
          * The event is encoded at the top level of the resulting structure.
          * If any of the `CodingKeys` conflict with keys defined by `EventBody`,
@@ -447,7 +527,6 @@ import WMFData
         enum CodingKeys: String, CodingKey {
             case schema = "$schema"
             case meta
-            case dt
             case event
         }
         
@@ -455,7 +534,6 @@ import WMFData
             var container = encoder.container(keyedBy: CodingKeys.self)
             do {
                 try container.encode(meta, forKey: .meta)
-                try container.encode(dt, forKey: .dt)
                 try container.encode(E.schema, forKey: .schema)
                 try event.encode(to: encoder)
             } catch let error {
@@ -614,15 +692,15 @@ import WMFData
             return
         }
 
-        let userDefaults = UserDefaults.standard
+        let appInstallID: String? = try? WMFDataEnvironment.current.crossProcessUserDefaultsStore?.load(key: WMFUserDefaultsKey.appInstallID.rawValue)
 
-        guard let appInstallID = userDefaults.wmf_appInstallId else {
+        guard let appInstallID else {
             DDLogError("EPC: App install ID is unset. This shouldn't happen.")
             return
         }
         
         let meta = Meta(stream: stream, id: UUID(), domain: domain)
-        let eventPayload: Encodable = needsMinimal ? MinimalEventBody<E>(meta: meta, dt: date, event: event) : EventBody<E>(meta: meta, appInstallID: appInstallID, appSessionID: sessionID, dt: date, event: event, isAnon: isAnon, isTemp: isTemp, primaryLanguage: primaryLanguage)
+        let eventPayload: Encodable = needsMinimal ? MinimalEventBody<E>(meta: meta, event: event) : EventBody<E>(meta: meta, appInstallID: appInstallID, appSessionID: sessionID, dt: date, event: event, isAnon: isAnon, isTemp: isTemp, primaryLanguage: primaryLanguage)
         do {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
@@ -632,16 +710,7 @@ import WMFData
             #endif
             
             let data = try encoder.encode(eventPayload)
-            
-            #if DEBUG
-            // Convert to loose dictionary so we can sort keys and print that way.
-            if let dict = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                let printablePayload = PrintableEventPayload(payload: dict)
-                DDLogDebug("\n\n📊EPC: Scheduling event to be sent to \(EventPlatformClient.eventIntakeURI):")
-                DDLogDebug("\(printablePayload)")
-            }
-            #endif
-            
+
             guard let streamConfigs = streamConfigurations else {
                 appendEventToInputBuffer(data: data, stream: stream)
                 return
@@ -654,6 +723,16 @@ import WMFData
                 DDLogWarn("EPC: Stream '\(stream.rawValue)' is not in sample")
                 return
             }
+
+            #if DEBUG
+            // Convert to loose dictionary so we can sort keys and print that way.
+            if let dict = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                let printablePayload = PrintableEventPayload(payload: dict)
+                DDLogDebug("\n\n📊EPC: Scheduling event to be sent to \(config.destination_event_service):")
+                DDLogDebug("\(printablePayload)")
+            }
+            #endif
+
             storageManager.push(data: data, stream: stream)
         } catch let error {
             DDLogError("EPC: \(error.localizedDescription)")
@@ -741,7 +820,7 @@ private extension EventPlatformClient {
                 fail(PostEventError.missingResponse)
                 return
             }
-            guard httpResponse.statusCode == 201 else {
+            guard httpResponse.statusCode == 201 || httpResponse.statusCode == 202 else {
                 fail(PostEventError.unexepectedResponse(httpResponse.statusCode))
                 return
             }
@@ -778,7 +857,7 @@ public protocol EventInterface: Codable {
     static var schema: EventPlatformClient.Schema { get }
 }
 
-private class PrintableEventPayload: CustomStringConvertible {
+class PrintableEventPayload: CustomStringConvertible {
     let payload: [String: Any]
     
     init(payload: [String : Any]) {

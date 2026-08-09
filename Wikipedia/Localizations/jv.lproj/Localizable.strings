@@ -1,6 +1,7 @@
 // Messages for Javanese (Jawa)
 // Exported from translatewiki.net
 // Author: Arifin.wijaya
+// Author: Bennylin
 // Author: Diki Ananta
 // Author: Macofe
 // Author: McDutchie
@@ -25,8 +26,6 @@
 "about-repositories-app-source-license" = "Kodhe sumber cumepak ing pangayomané $1.";
 "about-repositories-app-source-license-mit" = "Lisènsi MIT";
 "about-send-feedback" = "Kirimi pamrayoga aplikasi";
-"about-testers" = "Pandhadhar";
-"about-testers-details" = "Jaminan Kwalitèt dipriksa déning $1";
 "about-title" = "Ngenani";
 "about-translators" = "Juru pamertal";
 "about-translators-details" = "Dipertal déning sukarilawan ing $1";
@@ -113,7 +112,6 @@
 "description-welcome-start-editing-button" = "Wiwit mbesut";
 "dim-images" = "Bleretaké gambar";
 "edit-menu-item" = "Besut";
-"edit-published-subtitle" = "Kowé wis ndadèkaké Wikipédia luwih becik tumrap wong akèh";
 "edit-summary-choice-fixed-grammar" = "Ndandani paramasastra";
 "edit-summary-choice-fixed-typos" = "Ndandani salah tik";
 "edit-summary-choice-linked-words" = "Nambahi pranala";
@@ -203,12 +201,10 @@
 "forgot-password-instructions" = "Isi ing salah siji babagan ngisor iki saperlu nampa panuntun setèl-ulang tembung sandi lumantar layang-èl";
 "forgot-password-title" = "Ambali nyetèl tembung sandi";
 "forgot-password-username-or-email-title" = "Utawa";
-"history-clear-all" = "Resiki";
 "history-clear-confirmation-heading" = "Panjenengan yakin arep mbusak kabèh barang anyar?";
 "history-clear-delete-all" = "Ha'a, busak kabèh";
 "history-title" = "Sajarah";
 "home-button-explore-accessibility-label" = "Wikipédia, bali ing Dlajah";
-"home-button-history-accessibility-label" = "Wikipédia, bali nyang Sajarah";
 "home-button-saved-accessibility-label" = "Wikipédia, bali menyang Kasimpen";
 "home-more-like-footer" = "Liyané kang mèmper $1";
 "home-nearby-footer" = "Panggonan liyané ing pernahé panjenengan";
@@ -245,8 +241,10 @@
 "main-menu-title" = "Liyané";
 "main-menu-zero-faq" = "Pitakon Kerep Wikipédia Zéro";
 "navbar-title-mode-edit-wikitext-preview" = "Pratuduh";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 jangkah";
 "nearby-distance-label-km" = "$1 km";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 m";
 "nearby-distance-label-miles" = "$1 mil";
 "new-password-instructions" = "Panjenengan wis mlebu log mawa tembung sandi sadhéla. Saperlu ngrampungaké olèhé panjenengan mlebu log, setèlen tembung sandi anyar ing kéné.";
@@ -305,11 +303,6 @@
 "relative-date-hours-ago" = "{{PLURAL:$1|0=Mentas waé|$1 jam kapungkur}}";
 "relative-date-minutes-ago" = "{{PLURAL:$1|0=Mentas waé|$1 menit kapungkur}}";
 "relative-date-years-ago" = "{{PLURAL:$1|0=Taun iki|1=Taun wingi|$1 taun kapungkur}}";
-"replace-button-accessibility" = "Ayahi $1.";
-"replace-infolabel-method-replace" = "Ganti";
-"replace-infolabel-method-replace-all" = "Ganti kabèh";
-"replace-textfield-accessibility" = "Ganti";
-"replace-textfield-placeholder" = "Ganti mawa...";
 "saved-all-articles-title" = "Kabèh artikel";
 "saved-default-reading-list-tag" = "Pratélan iki ora bisa dibusek";
 "saved-pages-image-download-error" = "Wurung ngundhuh gambar tumrap kaca simpenan iki.";
@@ -337,14 +330,8 @@
 "settings-my-languages" = "Basa-basaku";
 // Fuzzy
 "settings-notifications" = "Wara-wara";
-"settings-notifications-info" = "Kabari ngenani artikel sing mumbul lan akèh diwaca ing Wikipédia sarana wara-wara otomatisé awak dhéwé. Kabèh iku cumepak sauga tanpa nglirwakaké privasi lan tumeka dhata-dhata sing nyumlik.";
-"settings-notifications-learn-more" = "Sinaua terus ngenani wara-wara";
-"settings-notifications-push-notifications" = "Wara-wara otomatis";
-"settings-notifications-system-turn-on" = "Urubaké Wara-wara";
-"settings-notifications-trending" = "Prastawa saiki sing mumbul";
 "settings-primary-language" = "Pokok";
 "settings-primary-language-details" = "Basa kapisan ing pratélan iki kaanggo minangka basa pokok tumrap aplikasiné.";
-"settings-storage-and-syncing-erase-saved-articles-button-title" = "Busek";
 "settings-title" = "Setèlan";
 "share-a-fact-made-with" = "Digawé nganggo aplikasi Wikipédia";
 // Fuzzy
@@ -390,9 +377,6 @@
 "welcome-languages-description" = "Basa-basa ing ngisor iki ana ing pirantiné panjenengan:";
 // Fuzzy
 "welcome-languages-search-title" = "Golèk ing mèh 300 basa";
-"welcome-notifications-tell-me-more-creation" = "Biwara kagawé lan kakirim menyang pirantimu lumantar aplikasiné, dudu saka paladèn (utawa péhak katelu)-né awak dhéwé.";
-"welcome-notifications-tell-me-more-storage" = "Pilalan wara-wara disimpen ing piranti lan ora adhedhasar katerangan utawa kagiyatan priangga.";
-"welcome-notifications-tell-me-more-title" = "Candhaké ngenani wara-wara";
 "wikitext-preview-changes" = "Njupuk pratuduh owah-owahanmu ...";
 "wikitext-preview-link-preview-description" = "Pranala iki ngener '$1'";
 "wikitext-preview-link-preview-title" = "Pratuduhé pranala";
@@ -402,5 +386,4 @@
 "wikitext-upload-result-unknown" = "Ora bisa nemtokaké asiling unggahan wikitèk.";
 "wikitext-upload-save" = "Mbabar...";
 "wikitext-upload-save-anonymously-warning" = "Besutan bakal diatribusèkaké marang alamat IP pirantiné panjenengan. Yèn panjenengan $1, panjenengan bakal duwé privasi luwih.";
-"wikitext-upload-save-sign-in" = "Mlebu log";
 "wikitext-upload-save-terms-name" = "Pranatan Pangguna";

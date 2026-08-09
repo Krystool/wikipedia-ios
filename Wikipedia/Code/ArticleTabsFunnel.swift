@@ -37,11 +37,11 @@ import WMF
         case article = "article"
         case places = "places"
         case saved = "saved"
-        case history = "history"
         case search = "search"
         case tabSearch = "tab_search"
         case tabsOverflow = "tabs_overflow"
         case mainPage = "main_page"
+        case activity = "activity"
     }
 
     private struct Event: EventInterface {
@@ -104,14 +104,6 @@ import WMF
         logEvent(activeInterface: .overview, action: .closeTabClick, project: nil)
     }
     
-    func logTabsOverviewTappedDYK() {
-        logEvent(activeInterface: .overview, action: .suggestedTabClick, actionData: ["suggested": "dyk"], project: nil)
-    }
-    
-    func logTabsOverviewTappedBYR() {
-        logEvent(activeInterface: .overview, action: .suggestedTabClick, actionData: ["suggested": "byr"], project: nil)
-    }
-
     func logFeedbackClose() {
         logEvent(activeInterface: .feedback, action: .closeFeedback, project: nil)
     }

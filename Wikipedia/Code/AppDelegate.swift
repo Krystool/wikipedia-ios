@@ -1,4 +1,5 @@
 import UIKit
+import WMFData
 import BackgroundTasks
 import CocoaLumberjackSwift
 
@@ -37,6 +38,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         updateDynamicIconShortcutItems()
         registerBackgroundTasks()
+
         return true
     }
     
@@ -84,28 +86,38 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func cancelPendingBackgroundTasks() {
         BGTaskScheduler.shared.cancelAllTaskRequests()
     }
-    
+
     // MARK: Notifications
-    
+
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: any Error) {
         DDLogError("Remote notification registration failure: \(error.localizedDescription)")
     }
-    
+
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        appViewController.setRemoteNotificationRegistrationStatusWithDeviceToken(deviceToken, error: nil)
+        #if DEBUG
+        let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+        let token = tokenParts.joined()
+        debugPrint("Device Token: \(token)")
+        #endif
+        appViewController.setRemoteNotificationRegistrationStatus(deviceToken: deviceToken, error: nil)
     }
 
     // MARK: Private
-    
+
     private func registerUserDefaults() {
-        UserDefaults.standard.register(defaults: ["WMFAutoSignTalkPageDiscussions": true])
+        let storedData = UserDefaults.standard.object(forKey: WMFUserDefaultsKey.autoSignTalkPageDiscussions.rawValue)
+        if storedData == nil {
+            WMFSettingsDataController.shared.setAutoSignTalkPageDiscussions(true)
+        }
     }
-    
+
     private func shouldRestoreNavigationStackOnResumeAfterBecomingActive() -> Bool {
-        let shouldOpenAppOnSearchTab = UserDefaults.standard.wmf_openAppOnSearchTab
+        // Read from WMFData store (migrated key)
+        let userDefaultsStore = WMFDataEnvironment.current.userDefaultsStore
+        let shouldOpenAppOnSearchTab: Bool = (try? userDefaultsStore?.load(key: WMFUserDefaultsKey.openAppOnSearchTab.rawValue)) ?? false
         return !shouldOpenAppOnSearchTab
     }
-    
+
     private func registerBackgroundTasks() {
 
         BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.backgroundAppRefreshTaskIdentifier, using: .main) { [weak self] task in

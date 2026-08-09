@@ -26,8 +26,6 @@
 "about-repositories-app-source-license" = "$1 కింద సోర్సు కోడు లభ్యం.";
 "about-repositories-app-source-license-mit" = "MIT లైసెన్సు";
 "about-send-feedback" = "యాప్‌పై ఫీడ్‌బ్యాకును పంపించండి";
-"about-testers" = "టెస్టర్లు";
-"about-testers-details" = "$1 QA టెస్టు చేసారు";
 "about-title" = "గురించి";
 "about-translators" = "అనువాదకులు";
 "about-translators-details" = "$1 లో స్వచ్ఛంద కార్యకర్తలు అనువదించారు";
@@ -142,7 +140,6 @@
 "description-help-title" = "వ్యాస వివరణ సహాయం";
 "description-help-wikidata-guide" = "వివరణలు రాసేందుకు వికీడేటా మార్గదర్శిని";
 "description-published-button-title" = "పూర్తయ్యింది";
-"description-published-footer" = "ఈ యాప్‌లో కూడా మీరు వ్యాసాలను సవరించవచ్చు. ఈసారి, పెన్సిల్ బొమ్మను నొక్కి చిన్నచిన్న భాషా దోషాలను, చిన్న వాక్యాలనూ సరిదిద్దండి.";
 "description-published-subtitle" = "ఇప్పుడే మీరు వికీపీడియాను మెరుగుపరచారు";
 "description-published-title" = "వివరణను ప్రచురించాం!";
 "description-welcome-concise-sub-title" = "పదీ పన్నెండు పదాలతో, ఒకే వరుసలో ఉంటే బాగుంటుంది.";
@@ -194,8 +191,6 @@
 "edit-menu-item-could-not-find-selection-alert-title" = "మీరు ఎంచుకున్న పాఠ్యం ఎక్కడుందో కనుక్కోలేక పోయాం";
 "edit-minor-learn-more-text" = "చిన్న మార్పుల గురించి మరింత తెలుసుకోండి";
 "edit-minor-text" = "ఇదొక చిన్న దిద్దుబాటు";
-"edit-published" = "దిద్దుబాటును ప్రచురించాం";
-"edit-published-subtitle" = "ఇప్పుడే మీరు వికీపీడియాను మెరుగుపరచారు";
 "edit-summary-add-summary-text" = "దిద్దుబాటు సారాంశం రాయండి";
 "edit-summary-choice-fixed-grammar" = "వ్యాకరణం సరిచేసాను";
 "edit-summary-choice-fixed-typos" = "అచ్చుతప్పులు సరిచేసాను";
@@ -350,12 +345,11 @@
 "forgot-password-email-sent" = "సంకేతపదాన్ని మార్చుకునే సూచనలతో ఈమెయిలు పంపించాం";
 "forgot-password-title" = "సంకేతపదాన్ని మార్చు";
 "forgot-password-username-or-email-title" = "లేదా";
-"history-clear-all" = "తుడిచివేయి";
+"games-wcf-explore-title" = "ఏది మొదట వచ్చింది?";
 "history-clear-confirmation-heading" = "నిజంగానే మీ ఇటీవలి అంశాలన్నింటినీ తొలగించాలా?";
 "history-clear-delete-all" = "అవును, అన్నిటినీ తొలగించు";
 "history-title" = "చరిత్ర";
 "home-button-explore-accessibility-label" = "వికీపీడియా, తిరిగి శోధనకు";
-"home-button-history-accessibility-label" = "వికీపీడియా, తిరిగి చరిత్రకు";
 "home-button-saved-accessibility-label" = "వికీపీడియా, తిరిగి భద్రపరచిన వాటికి";
 "home-more-like-footer" = "$1 లాంటివి మరిన్ని";
 "home-nearby-footer" = "మీకు దగ్గర్లోని మరిన్ని స్థలాలు";
@@ -415,20 +409,21 @@
 "main-menu-title" = "మరింత";
 "main-menu-zero-faq" = "వికీపీడియా సున్నా ఎఫ్ఎక్యూ";
 // Fuzzy
-"microsite-yir-english-reading-slide-subtitle" = "2025 లో ఇంగ్లీషు వికీపీడియా చదవడానికి ప్రజలు దాదాపు 2.4 బిలియన్ల గంటలు - 275,000 సంవత్సరాలకు పైగా - వెచ్చించారని అంచనా. మారుతున్న మన ప్రపంచం గురించి తెలుసుకోవాలనుకున్నప్పుడు, స్నేహితుల మధ్య పందెం గెలవాలనుకున్నప్పుడు లేదా ఆసక్తికరమైన పిల్లల ప్రశ్నకు సమాధానం చెప్పాలనుకున్నప్పుడూ వికీపీడియా తోడుగా ఉంటుంది.";
-"microsite-yir-english-reading-slide-subtitle-short" = "2025 లో ఇంగ్లీషు వికీపీడియా చదవడానికి ప్రజలు దాదాపు 2.4 బిలియన్ల గంటలు - 275,000 సంవత్సరాలకు పైగా! - వెచ్చించారని అంచనా.";
+"microsite-yir-english-reading-slide-subtitle-short-updated" = "2025 లో ఇంగ్లీషు వికీపీడియా చదవడానికి ప్రజలు దాదాపు 2.4 బిలియన్ల గంటలు - 275,000 సంవత్సరాలకు పైగా! - వెచ్చించారని అంచనా.";
+// Fuzzy
+"microsite-yir-english-reading-slide-subtitle-updated" = "2025 లో ఇంగ్లీషు వికీపీడియా చదవడానికి ప్రజలు దాదాపు 2.4 బిలియన్ల గంటలు - 275,000 సంవత్సరాలకు పైగా - వెచ్చించారని అంచనా. మారుతున్న మన ప్రపంచం గురించి తెలుసుకోవాలనుకున్నప్పుడు, స్నేహితుల మధ్య పందెం గెలవాలనుకున్నప్పుడు లేదా ఆసక్తికరమైన పిల్లల ప్రశ్నకు సమాధానం చెప్పాలనుకున్నప్పుడూ వికీపీడియా తోడుగా ఉంటుంది.";
 "more-languages-tooltip-description" = "వికీపీడియాను 300 భాషల్లో వెతకండి";
 "more-languages-tooltip-title" = "భాషలను చేర్చు";
 "move-articles-to-reading-list" = "{{PLURAL:$1|$1 వ్యాసాన్ని|$1 వ్యాసాలను}} చదివే జాబితాకు చేర్చు";
 "navbar-title-mode-edit-wikitext-preview" = "మునుజూపు";
-"nearby-distance-label-feet" = "$1 అడుగులు";
+"nearby-distance-label-feet" = "{{PLURAL:$1|$1 అడుగు|$1 అడుగులు}}";
 "nearby-distance-label-km" = "$1 కిమీ";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 మీ";
 "nearby-distance-label-miles" = "$1 మైళ్ళు";
 "new-password-instructions" = "మీరు తాత్కాలిక సంకేతపదంతో లాగినయ్యారు. ఈ లాగిన్ను పూర్తి చేసేందుకు, కొత్త సంకేతపదాన్ని పెట్టుకోండి.";
 "new-password-title" = "సంకేతపదం పెట్టుకోండి";
 "no-internet-connection" = "ఇంటర్నెట్ కనెక్షను లేదు";
-"no-internet-connection-article-reload-button" = "చివరిగా భద్రపరచిన కూర్పుకు తిరిగివెళ్ళు";
 "notifications-center-agent-description-from-format" = "$1 నుండి";
 "notifications-center-applied-filters-accessibility-label" = "గమనింపుల వడపోత - వడపోతలను వర్తింపజేసాం";
 "notifications-center-applied-project-filters-accessibility-label" = "ప్రాజెక్టుల వడపోత - వడపోతలను వర్తింపజేసాం";
@@ -442,7 +437,6 @@
 "notifications-center-empty-state-filters-subtitle" = "మరిన్ని సందేశాలు చూసేందుకు $1 ను మార్చండి";
 "notifications-center-empty-state-no-projects-selected" = "మరిన్ని సందేశాలు చూసేందుకు ప్రాజెక్టులను చేర్చండి";
 "notifications-center-empty-state-num-filters" = "{{PLURAL:$1|$1 వడపోత|$1 వడపోతలు}}";
-"notifications-center-feed-card-title" = "ఇప్పుడు దిద్దుబాటు గమనింపులు అందుబాటులో ఉన్నాయి";
 "notifications-center-feed-news-notification-button-text" = "పుష్ గమనింపులను ఆన్ చెయ్యి";
 "notifications-center-filters-accessibility-label" = "గమనింపుల వడపోత";
 "notifications-center-filters-read-status-item-title-all" = "అన్నీ";
@@ -604,7 +598,6 @@
 "reading-list-generic-error" = "మీ చదివే జాబితాలను తాజాకరిస్తోంటే అనుకోని లోపమేదో దొర్లింది.";
 "reading-list-keep-button-title" = "ఔను, వ్యాసాలను డివైసులో ఉంచు";
 "reading-list-keep-subtitle" = "ఈ డివైసులో, మీ వికీపీడియా ఖాతా లోకి సింకైన వ్యాసాలు కొన్ని ఉన్నాయి. మీరు లాగౌటయ్యాక కూడా ఆ వ్యాసాలను డివైసులో ఉంచమంటారా?";
-"reading-list-keep-sync-disabled-remove-article-button-title" = "వద్దు, వ్యాసాలను డివైసు, నా వికీపీడియా ఖాతా రెంటి లోంచీ తీసివెయ్యి";
 "reading-list-keep-title" = "డివైసులో భద్రపరచిన వ్యాసాలను ఉంచమంటారా?";
 "reading-list-limit-hit-for-unsorted-articles-button-title" = "వ్యాసాలను పేర్చు";
 "reading-list-limit-hit-for-unsorted-articles-subtitle" = "వరసలో పేర్చని వ్యాసాల పరిమితి 5000. ప్రస్తుతం ఉన్న వ్యాసాలను జాబితాలుగా పేర్చుకోండి. తద్వారా ఇక ముందు వ్యాసాలను పేర్చుకోవడం కొనసాగించవచ్చు.";
@@ -662,9 +655,6 @@
 "relative-date-seconds-abbreviated" = "$1సె";
 "relative-date-seconds-ago-abbreviated" = "$1సె క్రితం";
 "relative-date-years-ago" = "{{PLURAL:$1|0=ఈ సంవత్సరం|1=నిరుడు|$1 సంవత్సరాల క్రితం}}";
-"replace-button-accessibility" = "$1 చెయ్యి.";
-"replace-buttons-replace-accessibility" = "ఒక్క చోటనే మార్చడం";
-"replace-buttons-replace-all-accessibility" = "అన్ని చోట్లా మార్చడం";
 "reverted-edit-title" = "తిప్పికొట్టిన దిద్దుబాటు";
 "saved-all-articles-title" = "వ్యాసాలన్నీ";
 "saved-default-reading-list-tag" = "ఈ జాబితాను తొలగించలేరు";
@@ -678,7 +668,6 @@
 "search-button-accessibility-label" = "వికీపీడియాలో వెతుకు";
 "search-clear-title" = "తీసివేయి";
 "search-field-placeholder-text" = "వికీపీడియాలో వెతకండి";
-"search-reading-list-placeholder-text" = "భద్రపరచిన {{PLURAL:$1|వ్యాసాన్ని|వ్యాసాలను}} తీసెయ్యాలా?";
 "search-recent-clear-confirmation-heading" = "ఇటీవలి వెతుకులాట లన్నిటినీ తొలగించాలా?";
 "search-recent-clear-confirmation-sub-heading" = "ఈ చర్యను వెనక్కి తీసుకోలేరు!";
 "search-recent-clear-delete-all" = "అన్నిటినీ తొలగించు";
@@ -694,15 +683,8 @@
 "settings-my-languages" = "నా భాషలు";
 "settings-notifications" = "పంపించే గమనింపులు";
 "settings-notifications-echo-failure-try-again" = "మళ్ళీ ప్రయత్నించండి";
-"settings-notifications-learn-more" = "గమనింపుల గురించి మరింత తెలుసుకోండి";
-"settings-notifications-push-notifications" = "పంపించే గమనింపులు";
-"settings-notifications-system-turn-on" = "గమనింపులను ఆన్ చెయ్యి";
 "settings-primary-language" = "ప్రాథమిక";
 "settings-primary-language-details" = "ఈ జాబితా లోని మొదటి భాషను ఈ యాప్‌కు ప్రాథమిక భాషగా వాడతాం.";
-"settings-storage-and-syncing-erase-saved-articles-alert-title" = "భద్రపరచిన వ్యాసాలన్నిటినీ తుడిచివెయ్యాలా?";
-"settings-storage-and-syncing-erase-saved-articles-button-title" = "తుడిచివేయి";
-"settings-storage-and-syncing-erase-saved-articles-footer-text" = "భద్రపరచిన వ్యాసాలన్నిటినీ తుడిచేస్తే, వాటిని మీ డివైసు నుండే కాకుండా, సింకు చేతనంగా ఉంటే మీ ఖాతాలోనూ తీసివేస్తాం.\n\nమీరు భద్రపరచిన వ్యాసాలను తిడిచేస్తే $1 స్థలం ఖాళీ అవుతుంది.";
-"settings-storage-and-syncing-erase-saved-articles-title" = "భద్రపరచిన వ్యాసాలను తుడిచివెయ్యి";
 "settings-storage-and-syncing-full-sync" = "మీ చదివే జాబితాలను నేపథ్యంలో సింకు చేస్తాం";
 "settings-storage-and-syncing-show-default-reading-list-title" = "భద్రపరచిన చదివే జాబితాను చూపించు";
 "settings-storage-and-syncing-title" = "వ్యాసాల నిల్వ, సింకు చెయ్యడం";
@@ -777,9 +759,6 @@
 "welcome-languages-add-or-edit-button" = "అభీష్టమైన భాషలను చేర్చండి, సవరించండి";
 "welcome-languages-description" = "మీ డివైసులో మాకు కింది భాషలు కనబడ్డాయి:";
 "welcome-languages-search-title" = "300 పైచిలుకు భాషల్లో వెతకండి";
-"welcome-notifications-tell-me-more-creation" = "గమనింపులను సృష్టించి, మీ డివైసుకు పంపించేది ఈ యాపే, మా సర్వర్లు గానీ థర్డ్ పార్టీ సర్వర్లు గానీ కాదు.";
-"welcome-notifications-tell-me-more-storage" = "గమనింపు అభిరుచులను మీ డివైసులో భద్రపరుస్తాం. అవి మీ వ్యక్తిగత సమాచారం పైనో, మీ కార్యకలాపాలపైనో ఆధారపడినవి కావు.";
-"welcome-notifications-tell-me-more-title" = "గమనింపుల గురించి మరింత తెలుసుకోండి";
 "widget-onthisday-description" = "చరిత్రలో ఈ రోజున ఏం జరిగిందో శోధించండి.";
 "widget-onthisday-placeholder-article-snippet" = "ఎవరైనా దిద్దుబాటు చెయ్యగలిగే స్వేచ్ఛా ఆన్‌లైను విజ్ఞానసర్వస్వం";
 "widget-onthisday-placeholder-event-snippet" = "వికీపీడియా అనే స్వేచ్ఛా విజ్ఞానసర్వస్వం ఆన్‌లైను లోకి వచ్చింది.";
@@ -797,7 +776,6 @@
 "wikitext-upload-save" = "ప్రచురిస్తున్నాం...";
 "wikitext-upload-save-anonymously-or-login" = "దిద్దుబాట్ల శ్రేయస్సు మీ డివైసు ఐపీ చిరునామాకు చెందుతుంది. $1లాగినైతే$2, మీకు మరింత గోప్యత ఉంటుంది.";
 "wikitext-upload-save-anonymously-warning" = "దిద్దుబాట్ల శ్రేయస్సు మీ డివైసు ఐపీ చిరునామాకు చెందుతుంది. $1, మీకు మరింత గోప్యత ఉంటుంది.";
-"wikitext-upload-save-sign-in" = "ప్రవేశించండి";
 "wikitext-upload-save-terms-name" = "వాడుక నియమాలు";
 "year-in-review-personalized-date-day-footer-v3" = "చదవడానికి ఇష్టపడే రోజు";
 "year-in-review-personalized-date-month-footer-v3" = "మీరు ఎక్కువగా చదివిన నెల";
@@ -805,8 +783,9 @@
 "year-in-review-personalized-location-subtitle-format-1" = "మీరు $2$1$3 గురించి చదివారు.";
 "year-in-review-personalized-location-subtitle-format-3" = "మీరు $4$1$5, $4$2$5, $4$3$5 ల గురించి చదివారు.";
 // Fuzzy
-"year-in-review-personalized-reading-subtitle-format-v3" = "ప్రపంచవ్యాప్తంగా వికీపీడియా పాఠకుల్లో మీరు తొలి **PERCENT** లో ఉన్నారు. సగటున ఒక్కో పాఠకుడు సంవత్సరానికి {{PLURAL:$1|$1 వ్యాసం|$1 వ్యాసాలు}} చదువుతారు.";
-"year-in-review-personalized-reading-title-v3-format" = "2025 లో మీరు, {{PLURAL:$2|$2 వ్యాసాన్ని|$2 వ్యాసాలను}} చదవడానికి {{PLURAL:$1|$1 నిమిషం|$1 నిమిషాలు}} వెచ్చించారు";
+"year-in-review-personalized-reading-subtitle-format-v3-updated" = "ప్రపంచవ్యాప్తంగా వికీపీడియా పాఠకుల్లో మీరు తొలి **PERCENT** లో ఉన్నారు. సగటున ఒక్కో పాఠకుడు సంవత్సరానికి {{PLURAL:$1|$1 వ్యాసం|$1 వ్యాసాలు}} చదువుతారు.";
+// Fuzzy
+"year-in-review-personalized-reading-title-v3-format-updated" = "2025 లో మీరు, {{PLURAL:$2|$2 వ్యాసాన్ని|$2 వ్యాసాలను}} చదవడానికి {{PLURAL:$1|$1 నిమిషం|$1 నిమిషాలు}} వెచ్చించారు";
 "year-in-review-time-afternoon" = "అపరాహ్ణం";
 "year-in-review-time-evening" = "సాయంత్రం";
 "year-in-review-time-late-night" = "అర్థరాత్రి";

@@ -73,9 +73,6 @@
         case WMFContentGroupKindOnThisDay:
             URL = [WMFContentGroup onThisDayContentGroupURLForSiteURL:self.siteURL midnightUTCDate:self.midnightUTCDate];
             break;
-        case WMFContentGroupKindNotification:
-            URL = [WMFContentGroup notificationContentGroupURLWithLanguageVariantCode:self.siteURL.wmf_languageVariantCode];
-            break;
         case WMFContentGroupKindTheme:
             URL = [WMFContentGroup themeContentGroupURLWithLanguageVariantCode:self.siteURL.wmf_languageVariantCode];
             break;
@@ -86,6 +83,10 @@
             URL = [WMFContentGroup announcementURLForSiteURL:self.siteURL identifier:[(WMFAnnouncement *)self.contentPreview identifier]];
         case WMFContentGroupKindSuggestedEdits:
             URL = [WMFContentGroup suggestedEditsURLForSiteURL:self.siteURL];
+            break;
+        case WMFContentGroupKindDailyGame:
+            URL = [WMFContentGroup dailyGameURLForSiteURL:self.siteURL];
+            break;
         default:
             break;
     }
@@ -114,9 +115,6 @@
         case WMFContentGroupKindAnnouncement:
             self.contentType = WMFContentTypeAnnouncement;
             break;
-        case WMFContentGroupKindNotification:
-            self.contentType = WMFContentTypeNotification;
-            break;
         case WMFContentGroupKindTheme:
             self.contentType = WMFContentTypeTheme;
             break;
@@ -125,6 +123,9 @@
             break;
         case WMFContentGroupKindSuggestedEdits:
             self.contentType = WMFContentTypeSuggestedEdits;
+            break;
+        case WMFContentGroupKindDailyGame:
+            self.contentType = WMFContentTypeDailyGame;
             break;
         case WMFContentGroupKindContinueReading:
         case WMFContentGroupKindMainPage:
@@ -163,6 +164,9 @@
         case WMFContentGroupKindContinueReading:
             updatedDailySortPriority = 0;
             break;
+        case WMFContentGroupKindDailyGame:
+            updatedDailySortPriority = contentLanguageSortOrder + 5;
+            break;
         case WMFContentGroupKindRelatedPages:
             updatedDailySortPriority = 1;
             break;
@@ -176,13 +180,10 @@
             updatedDailySortPriority = contentLanguageSortOrder + 4;
             break;
         case WMFContentGroupKindTopRead:
-            updatedDailySortPriority = contentLanguageSortOrder + 5;
-            break;
-        case WMFContentGroupKindNews:
             updatedDailySortPriority = contentLanguageSortOrder + 6;
             break;
-        case WMFContentGroupKindNotification:
-            updatedDailySortPriority = -1;
+        case WMFContentGroupKindNews:
+            updatedDailySortPriority = contentLanguageSortOrder + 7;
             break;
         case WMFContentGroupKindPictureOfTheDay:
             updatedDailySortPriority = 8;
@@ -345,7 +346,6 @@
 
         } break;
         case WMFContentGroupKindMainPage:
-        case WMFContentGroupKindNotification:
         case WMFContentGroupKindLocationPlaceholder:
         case WMFContentGroupKindPictureOfTheDay:
         case WMFContentGroupKindRandom:
@@ -526,6 +526,19 @@
 
 + (nullable NSURL *)suggestedEditsURLForSiteURL:(NSURL *)siteURL {
     NSURL *URL = [[self baseURL] URLByAppendingPathComponent:@"suggested-edits"];
+    URL.wmf_languageVariantCode = siteURL.wmf_languageVariantCode;
+    return URL;
+}
+
++ (nullable NSURL *)dailyGameURLForSiteURL:(NSURL *)siteURL {
+    NSString *language = siteURL.wmf_languageCode;
+    NSString *domain = siteURL.wmf_domain;
+    if (!domain || !language) {
+        return nil;
+    }
+    NSURL *URL = [[self baseURL] URLByAppendingPathComponent:@"daily-game"];
+    URL = [URL URLByAppendingPathComponent:domain];
+    URL = [URL URLByAppendingPathComponent:language];
     URL.wmf_languageVariantCode = siteURL.wmf_languageVariantCode;
     return URL;
 }
@@ -807,7 +820,7 @@
     return contentGroups;
 }
 
-/* There is an important dependency between the langauge variant property and the computed properties siteURL, articleURL, and URL. Each returned URL uses the value of the siteURLString, articleURLString, or key properties, respectively. Each also sets the value of the variant property as the wmf_languageVariantCode of the created URL. The langauge variant should remain consistent for the lifetime of a WMFContentGroup object. When created, the variant comes from either the passed-in URL if present, or the siteURL. Note that this property is set *before* the siteURL and URL properties in this method.
+/* There is an important dependency between the language variant property and the computed properties siteURL, articleURL, and URL. Each returned URL uses the value of the siteURLString, articleURLString, or key properties, respectively. Each also sets the value of the variant property as the wmf_languageVariantCode of the created URL. The language variant should remain consistent for the lifetime of a WMFContentGroup object. When created, the variant comes from either the passed-in URL if present, or the siteURL. Note that this property is set *before* the siteURL and URL properties in this method.
  
     The setter methods for siteURL, articleURL, and URL assert that the variant on those incoming URLs equals the variant property of the group. This should always be true. The assertions ensure that these assumptions are true in all uses and that future changes do not unexpectedly violate that assumption.
  */

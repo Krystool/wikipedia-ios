@@ -20,8 +20,6 @@
 "about-repositories-app-source-license" = "Kodeu sumber nyangkaruk di handapeun $1.";
 "about-repositories-app-source-license-mit" = "Lisénsi MIT";
 "about-send-feedback" = "Kirim eupan balik aplikasi";
-"about-testers" = "Panguji";
-"about-testers-details" = "Jaminan Kualitas diuji ku $1";
 "about-title" = "Ngeunaan";
 "about-translators" = "Panarjamah";
 "about-translators-details" = "Ditarjamahkeun ku rélawan di $1";
@@ -146,12 +144,10 @@
 "forgot-password-instructions" = "Eusian salah sahiji widang di handap pikeun narima instruksi panyetelan ulang kecap sandi liwa surélék";
 "forgot-password-title" = "Setél ulang kecap sandi";
 "forgot-password-username-or-email-title" = "Atawa";
-"history-clear-all" = "Bersihkeun";
 "history-clear-confirmation-heading" = "Anjeun yakin hayang mupus sakabéh poin kiwari anjeun?";
 "history-clear-delete-all" = "Nya, hapus sadayana";
 "history-title" = "Jujutan";
 "home-button-explore-accessibility-label" = "Wikipédia, balik deui ka kaca Langlangan";
-"home-button-history-accessibility-label" = "Wikipédia, balik deui kana Jujutan";
 "home-button-saved-accessibility-label" = "Wikipédia, balik deui ka nu Kasimpen";
 "home-more-like-footer" = "Lianna nu siga $1";
 // Fuzzy
@@ -188,14 +184,15 @@
 "main-menu-title" = "Lianna";
 "main-menu-zero-faq" = "NLD Wikipédia Zéro";
 "navbar-title-mode-edit-wikitext-preview" = "Pramidang";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 kaki";
 "nearby-distance-label-km" = "$1 km";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 m";
 "nearby-distance-label-miles" = "$1 mil";
 "new-password-instructions" = "Anjeun asup log migunakeun sandi témporér. Pikeun nganggeuskeun asup log, anjeun kudu nyieun kecap sandi anyar di dieu.";
 "new-password-title" = "Atur kecap sandi anjeun";
 "no-email-account-alert" = "Pék siapkeun hiji akun surélék di pakakas anjeun sarta cobaan deui.";
-"no-internet-connection-article-reload-button" = "Balik deui ka vérsi kabucit";
 // Fuzzy
 "notifications-center-feed-news-notification-button-text" = "Pareuman iber";
 "number-billions" = "$1 milyar";
@@ -255,7 +252,6 @@
 "relative-date-minutes-ago" = "{{PLURAL:$1|0=Cik kénéh|$1 menit kaliwat|$1 menit kaliwat}}";
 // Fuzzy
 "relative-date-years-ago" = "{{PLURAL:$1|0=Taun ieu|Taun kamari|$1 taun kaliwat}}";
-"replace-method-button-accessibility" = "Ganti métodeu. Setél ka $1. Pilih jang ngarobah.";
 "saved-pages-image-download-error" = "Gagal ngundeur gambar pikeun ieu kaca kasimpen.";
 "saved-search-default-text" = "Paluruh artikel kasimpen";
 "saved-title" = "Kasimpen";
@@ -279,11 +275,6 @@
 "settings-my-languages" = "Basa kami";
 // Fuzzy
 "settings-notifications" = "Iber";
-"settings-notifications-info" = "Meunangkeun iber ngeunaan artikel nu keur trén sarta bacaan pangluhurna di Wikipédia kalawan iber otomatis kami. Sakumna sayaga patalian jeung privasi sarta nepi ka data menit.";
-"settings-notifications-learn-more" = "Tungtik leuwih jero ngeunaan iber";
-"settings-notifications-push-notifications" = "Notifikasi sorangan";
-"settings-notifications-system-turn-on" = "Hirupan notifikasi";
-"settings-notifications-trending" = "Kajadian kiwari";
 "settings-primary-language" = "Utama";
 // Fuzzy
 "settings-primary-language-details" = "Basa munggaran dina ieu daptar dipaké minangka basa utama pikeun aplikasi. Ngarobah ieu basa bakal ngarobah kontén sapopoé (kawas Artikel Petingan) nu dipidangkeun dina Langlang.";
@@ -337,9 +328,6 @@
 "welcome-languages-description" = "Kami geus manggihan basa di handap dina pakakas anjeun:";
 // Fuzzy
 "welcome-languages-search-title" = "Paluruh di ampir 300 basa";
-"welcome-notifications-tell-me-more-creation" = "Iber dijieun sarta ditepikeun kana parangkat anjeun ku aplikasi, lain tina sérver kami (atawa pihak katiga).";
-"welcome-notifications-tell-me-more-storage" = "Préférénsi iber disimpen di parangkat sarta teu dumasar kana informasi atawa aktivitas pribadi.";
-"welcome-notifications-tell-me-more-title" = "Leuwih jero ngeunaan iber";
 "wikitext-preview-changes" = "Nganteur pramidang tina parobahan ajeun...";
 "wikitext-preview-link-preview-description" = "Ieu tutumbu nungtun ka '$1'";
 "wikitext-preview-link-preview-title" = "Pramidang tutumbu";
@@ -349,5 +337,4 @@
 "wikitext-upload-result-unknown" = "Teu bisa nangtukeun hasil unjalan téks wiki.";
 "wikitext-upload-save" = "Midangkeun...";
 "wikitext-upload-save-anonymously-warning" = "Éditan bakal ditepungkeun kana alamat IP parangkat. Mun anjeun $1 anjeun bakal mibanda privasi leuwih.";
-"wikitext-upload-save-sign-in" = "Asup log";
 "wikitext-upload-save-terms-name" = "Katangtuan Pamakéan";

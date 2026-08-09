@@ -29,7 +29,7 @@
 "close-button-accessibility-label" = "Bigre";
 "edit-link-title" = "Girêdanê biguhêre";
 "edit-summary-choice-fixed-grammar" = "Rêziman sererast kir";
-"edit-summary-choice-fixed-typos" = "Şaşnivîsînê sererast kir";
+"edit-summary-choice-fixed-typos" = "Nivîsa xelet sererast kir";
 "edit-summary-choice-linked-words" = "Girêdanan lê zêde kir";
 "editor-exit-confirmation-body" = "Ma hûn pê piştrast in ku hûn dixwazin ji moda guhartinê bêyî weşandinê derkevin?";
 "empty-insert-media-title" = "Dosyeyekê bibijêre ji Wîkîmedya Commonsê";
@@ -37,7 +37,6 @@
 "explore-potd-heading" = "Wêneyê rojê";
 "explore-random-article-heading" = "Gotara ketober";
 "field-password-title" = "Şîfre";
-"history-clear-all" = "Paqij bike";
 "history-clear-delete-all" = "Erê, hemûyan jê bibe";
 "history-title" = "Dîrok";
 "icon-shortcut-random-title" = "Gotara ketober";
@@ -53,8 +52,10 @@
 "main-menu-terms-of-use" = "Mercên Bikaranînê";
 "main-menu-title" = "Bêhtir";
 "navbar-title-mode-edit-wikitext-preview" = "Pêşdîtin";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 fît";
 "nearby-distance-label-km" = "$1 km";
+// Fuzzy
 "nearby-distance-label-meters" = "$ m";
 "nearby-distance-label-miles" = "$1 mîl";
 "notifications-center-swipe-more" = "Bêhtir";
@@ -79,5 +80,4 @@
 "welcome-languages-add-button" = "Zimanekî din lê zêde bike";
 "wikitext-preview-save-changes-title" = "Guherandinan tomar bike";
 "wikitext-upload-save" = "Tê weşandin...";
-"wikitext-upload-save-sign-in" = "Têkeve";
 "wikitext-upload-save-terms-name" = "Mercên Bikaranînê";

@@ -1,6 +1,8 @@
 import WMFComponents
 import NotificationCenter
 import WMF
+import WMFNativeLocalizations
+import WMFData
 
 @available(*, deprecated, message: "TODO: Rework into iOS 14 home screen widget")
 class WMFTodayContinueReadingWidgetViewController: ExtensionViewController, NCWidgetProviding {
@@ -42,6 +44,11 @@ class WMFTodayContinueReadingWidgetViewController: ExtensionViewController, NCWi
         emptyDescriptionLabel.text = WMFLocalizedString("continue-reading-empty-description", value:"Explore Wikipedia for more articles to read", comment: "Explore Wikipedia for more articles to read")
         
         view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTapGestureRecognizer(_:))))
+        
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self, UITraitHorizontalSizeClass.self, UITraitVerticalSizeClass.self]) { [weak self] (viewController: Self, previousTraitCollection: UITraitCollection) in
+            guard let self else { return }
+            self.updatePreferredContentSize()
+        }
     }
 
     @objc func handleTapGestureRecognizer(_ recognizer: UITapGestureRecognizer) {
@@ -138,7 +145,7 @@ class WMFTodayContinueReadingWidgetViewController: ExtensionViewController, NCWi
             self.updatePreferredContentSize()
             completion(true)
         }
-        if let imageURL = article.imageURL(forWidth: self.traitCollection.wmf_nearbyThumbnailWidth) {
+        if let imageURL = article.imageURL(forWidth: ImageUtils.nearbyThumbnailWidth()) {
             self.collapseImageAndWidenLabels = false
             self.imageView.wmf_imageController = dataStore.cacheController
             self.imageView.wmf_setImage(with: imageURL, detectFaces: true, onGPU: true, failure: { (error) in
@@ -159,11 +166,6 @@ class WMFTodayContinueReadingWidgetViewController: ExtensionViewController, NCWi
         fitSize.width = view.bounds.size.width
         fitSize = view.systemLayoutSizeFitting(fitSize, withHorizontalFittingPriority: UILayoutPriority.required, verticalFittingPriority: UILayoutPriority.defaultLow)
         preferredContentSize = fitSize
-    }
-    
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        updatePreferredContentSize()
     }
     
     @IBAction func continueReading(_ sender: AnyObject) {

@@ -2,6 +2,8 @@ import MessageUI
 import CocoaLumberjackSwift
 import WMF
 import WMFComponents
+import WMFData
+import WMFNativeLocalizations
 
 @objc(WMFHelpViewController)
 class HelpViewController: SinglePageWebViewController {
@@ -113,7 +115,9 @@ class HelpViewController: SinglePageWebViewController {
     @objc func exportUserData() {
         
         let confirmationTitle = WMFLocalizedString("export-user-data-confirmation-title", value: "Share app library?", comment: "Title of confirmation modal after user taps \"Export User Data\" button.")
-        let confirmationMessage = WMFLocalizedString("export-user-data-confirmation-message", value: "Sharing your app library includes data about your Reading lists and history, preferences, and Explore feed content. This data file should only be shared with a trusted recipient to use for technical diagnostic purposes.", comment: "Message of confirmation modal after user taps \"Export User Data\" button.")
+        let confirmationMessage = WMFDeveloperSettingsDataController.shared.isCommunityFeedMode
+            ? WMFLocalizedString("export-user-data-confirmation-message-community", value: "Sharing your app library includes data about your Reading lists and history, preferences, and Community feed content. This data file should only be shared with a trusted recipient to use for technical diagnostic purposes.", comment: "Message of confirmation modal after user taps \"Export User Data\" button.")
+            : WMFLocalizedString("export-user-data-confirmation-message", value: "Sharing your app library includes data about your Reading lists and history, preferences, and Explore feed content. This data file should only be shared with a trusted recipient to use for technical diagnostic purposes.", comment: "Message of confirmation modal after user taps \"Export User Data\" button.")
         let shareAction = UIAlertAction(title: CommonStrings.shareActionTitle, style: .default) { _ in
             self.kickoffExportUserDataProcess()
         }
@@ -128,7 +132,7 @@ class HelpViewController: SinglePageWebViewController {
         let mailto = "mailto:\(address)?subject=\(subject)&body=\(body)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
 
         guard let encodedMailto = mailto, let mailtoURL = URL(string: encodedMailto), UIApplication.shared.canOpenURL(mailtoURL) else {
-            WMFAlertManager.sharedInstance.showErrorAlertWithMessage(CommonStrings.noEmailClient, sticky: false, dismissPreviousAlerts: false)
+            WMFToastManager.sharedInstance.showToast(CommonStrings.noEmailClient, sticky: true, dismissPreviousToasts: true, tapCallBack: nil)
             return
         }
 

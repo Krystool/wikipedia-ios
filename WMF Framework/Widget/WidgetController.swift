@@ -1,6 +1,7 @@
 import Foundation
 import WidgetKit
 import CocoaLumberjackSwift
+import WMFData
 
 @objc(WMFWidgetController)
 public final class WidgetController: NSObject {
@@ -14,6 +15,7 @@ public final class WidgetController: NSObject {
         case topRead = "org.wikimedia.wikipedia.widgets.topRead"
         case search = "org.wikimedia.wikipedia.widgets.search"
         case lockscreenSearch = "org.wikimedia.wikipedia.widgets.lockscreen-search"
+        case randomWidget = "org.wikimedia.wikipedia.widgets.readingChallenge" // stays as reading challenge to update 
 
         public var identifier: String {
             return self.rawValue
@@ -22,29 +24,30 @@ public final class WidgetController: NSObject {
 
     // MARK: Properties
 
-	@objc public static let shared = WidgetController()
+    @objc public static let shared = WidgetController()
     private let sharedCache = SharedContainerCache(fileName: SharedContainerCacheCommonNames.widgetCache)
     
-    private var widgetCache: WidgetCache {
+    var widgetCache: WidgetCache {
         return sharedCache.loadCache() ?? WidgetCache(settings: .default, featuredContent: nil)
     }
 
     // MARK: Public
 
-	@objc public func reloadAllWidgetsIfNecessary() {
+    @objc public func reloadAllWidgetsIfNecessary() {
         guard !Bundle.main.isAppExtension else {
             return
         }
 
         let dataStore = MWKDataStore.shared()
         let appLanguage = dataStore.languageLinkController.appLanguage
+        let preferredLanguageCodes = dataStore.languageLinkController.preferredLanguages.map { $0.languageCode }
         if let siteURL = appLanguage?.siteURL, let languageCode = appLanguage?.languageCode {
-            let updatedWidgetSettings = WidgetSettings(siteURL: siteURL, languageCode: languageCode, languageVariantCode: appLanguage?.languageVariantCode)
+            let updatedWidgetSettings = WidgetSettings(siteURL: siteURL, languageCode: languageCode, languageVariantCode: appLanguage?.languageVariantCode, preferredLanguageCodes: preferredLanguageCodes)
             updateCacheWith(settings: updatedWidgetSettings)
         }
 
         WidgetCenter.shared.reloadAllTimelines()
-	}
+    }
     
     public func reloadFeaturedArticleWidgetIfNecessary() {
         guard !Bundle.main.isAppExtension else {
@@ -53,8 +56,9 @@ public final class WidgetController: NSObject {
 
         let dataStore = MWKDataStore.shared()
         let appLanguage = dataStore.languageLinkController.appLanguage
+        let preferredLanguageCodes = dataStore.languageLinkController.preferredLanguages.map { $0.languageCode }
         if let siteURL = appLanguage?.siteURL, let languageCode = appLanguage?.languageCode {
-            let updatedWidgetSettings = WidgetSettings(siteURL: siteURL, languageCode: languageCode, languageVariantCode: appLanguage?.languageVariantCode)
+            let updatedWidgetSettings = WidgetSettings(siteURL: siteURL, languageCode: languageCode, languageVariantCode: appLanguage?.languageVariantCode, preferredLanguageCodes: preferredLanguageCodes)
             updateCacheWith(settings: updatedWidgetSettings)
         }
         
@@ -171,7 +175,14 @@ public final class WidgetController: NSObject {
                 return
             }
             let openFiles = self.openFilePaths()
-            let openSqliteFile = openFiles.first(where: { $0.hasSuffix(".sqlite") })
+
+            // Only Core Data stores in the shared app container matter here.
+            let containerPath = FileManager.default.wmf_containerURL().resolvingSymlinksInPath().path
+            let containerPathPrefix = containerPath.hasSuffix("/") ? containerPath : (containerPath + "/")
+            let openSqliteFile = openFiles.first(where: {
+                let resolvedPath = URL(fileURLWithPath: $0).resolvingSymlinksInPath().path
+                return resolvedPath.hasPrefix(containerPathPrefix) && resolvedPath.hasSuffix(".sqlite")
+            })
             assert(openSqliteFile == nil, "There should be no open sqlite files (which in our case are Core Data persistent stores) in the shared app container after the data store is released. The widget still has a lock on these files: \(openFiles)")
             #endif
         }
@@ -208,9 +219,9 @@ public extension WidgetController {
         return widgetCache.settings.siteURL
     }
 
-    var potdTargetImageSize: CGSize {
-        CGSize(width: 1000, height: 1000)
-    }
+    static var potdSmallImageWidth: Int { ImageUtils.ImageWidth.w500.rawValue }
+    static var potdMediumImageWidth: Int { ImageUtils.ImageWidth.w960.rawValue }
+    static var potdLargeImageWidth: Int { ImageUtils.ImageWidth.w1280.rawValue }
 
     // MARK: - Utility
 
@@ -254,7 +265,6 @@ public extension WidgetController {
             return
         }
 
-        // Fetch fresh featured content from network
         fetcher.fetchFeaturedContent(forDate: Date(), siteURL: widgetCache.settings.siteURL, languageCode: widgetCache.settings.languageCode, languageVariantCode: widgetCache.settings.languageVariantCode) { result in
             switch result {
             case .success(let featuredContent):
@@ -395,7 +405,7 @@ public extension WidgetController {
 
     // MARK: - Fetch Picture of the Day Widget Content
 
-    func fetchPictureOfTheDayContent(isSnapshot: Bool = false, completion: @escaping (WidgetContentFetcher.PictureOfTheDayResult) -> Void) {
+    func fetchPictureOfTheDayContent(isSnapshot: Bool = false, maxWidth: Int = ImageUtils.ImageWidth.w960.rawValue, completion: @escaping (WidgetContentFetcher.PictureOfTheDayResult) -> Void) {
         func performCompletion(result: WidgetContentFetcher.PictureOfTheDayResult) {
             DispatchQueue.main.async {
                 completion(result)
@@ -418,11 +428,34 @@ public extension WidgetController {
         fetchFeaturedContent { result in
             switch result {
             case .success(var featuredContent):
-                if var imageSource = featuredContent.pictureOfTheDay?.originalImageSource {
-                    imageSource.source = WMFChangeImageSourceURLSizePrefix(imageSource.source, Int(self.potdTargetImageSize.width))
-                    featuredContent.pictureOfTheDay?.originalImageSource = imageSource
+                // Portrait images deliver far more pixels for the same requested width;
+                // cap the request so the decoded bitmap stays comparable to landscape
+                // (the widget extension has a ~30MB memory limit).
+                var effectiveMaxWidth = maxWidth
+                if let imageSource = featuredContent.pictureOfTheDay?.thumbnailImageSource ?? featuredContent.pictureOfTheDay?.originalImageSource,
+                   imageSource.height > imageSource.width {
+                    effectiveMaxWidth = min(maxWidth, ImageUtils.ImageWidth.w960.rawValue)
+                }
+                let standardWidth = ImageUtils.standardizeWidthToMediaWiki(effectiveMaxWidth)
+
+                if let cachedSource = featuredContent.pictureOfTheDay?.originalImageSource,
+                   cachedSource.data != nil,
+                   WMFChangeImageSourceURLSizePrefix(cachedSource.source, standardWidth) == cachedSource.source,
+                   let pictureOfTheDay = featuredContent.pictureOfTheDay {
+                    performCompletion(result: .success(pictureOfTheDay))
+                    return
+                }
+
+                if var imageSource = featuredContent.pictureOfTheDay?.thumbnailImageSource ?? featuredContent.pictureOfTheDay?.originalImageSource {
+                    imageSource.source = WMFChangeImageSourceURLSizePrefix(imageSource.source, standardWidth)
                     fetcher.fetchImageDataFrom(imageSource: imageSource) { imageResult in
                         featuredContent.pictureOfTheDay?.originalImageSource?.data = try? imageResult.get()
+
+                        // Record which size variant the data corresponds to so the cached-data
+                        // fast-path above can match on later requests. The cache is day-scoped,
+                        // but a single day sees many provider invocations (instances x families
+                        // x snapshot/timeline), only the first needs the network.
+                        featuredContent.pictureOfTheDay?.originalImageSource?.source = imageSource.source
                         widgetCache.featuredContent = featuredContent
                         self.sharedCache.saveCache(widgetCache)
 

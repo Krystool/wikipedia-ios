@@ -16,7 +16,8 @@ typedef NS_ENUM(int16_t, WMFContentType) {
     WMFContentTypeNotification = 7,
     WMFContentTypeTheme = 8,
     WMFContentTypeReadingList = 9,
-    WMFContentTypeSuggestedEdits = 10
+    WMFContentTypeSuggestedEdits = 10,
+    WMFContentTypeDailyGame = 11
 };
 
 typedef NS_ENUM(int32_t, WMFContentGroupKind) {
@@ -30,13 +31,13 @@ typedef NS_ENUM(int32_t, WMFContentGroupKind) {
     WMFContentGroupKindFeaturedArticle = 7,
     WMFContentGroupKindTopRead = 8,
     WMFContentGroupKindNews = 9,
-    WMFContentGroupKindNotification = 10,
     WMFContentGroupKindAnnouncement = 11,
     WMFContentGroupKindLocationPlaceholder = 12,
     WMFContentGroupKindOnThisDay = 13,
     WMFContentGroupKindTheme = 14,
     WMFContentGroupKindReadingList = 15,
-    WMFContentGroupKindSuggestedEdits = 16
+    WMFContentGroupKindSuggestedEdits = 16,
+    WMFContentGroupKindDailyGame = 17
 };
 
 typedef NS_ENUM(int16_t, WMFContentGroupUndoType) {
@@ -80,6 +81,7 @@ typedef NS_ENUM(int16_t, WMFContentGroupUndoType) {
 + (nullable NSURL *)themeContentGroupURLWithLanguageVariantCode:(NSString *)languageVariantCode;
 + (nullable NSURL *)readingListContentGroupURLWithLanguageVariantCode:(NSString *)languageVariantCode;
 + (nullable NSURL *)suggestedEditsURLForSiteURL:(NSURL *)siteURL;
++ (nullable NSURL *)dailyGameURLForSiteURL:(NSURL *)siteURL;
 
 - (BOOL)isForLocalDate:(NSDate *)date;           //date is a date in the user's time zone
 @property (nonatomic, readonly) BOOL isForToday; //is for today in the user's time zone

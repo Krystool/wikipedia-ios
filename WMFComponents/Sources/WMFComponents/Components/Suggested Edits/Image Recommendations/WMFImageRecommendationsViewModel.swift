@@ -15,7 +15,6 @@ public final class WMFImageRecommendationsViewModel: ObservableObject {
     public struct LocalizedStrings {
 		public typealias SurveyLocalizedStrings =  WMFSurveyViewModel.LocalizedStrings
         public typealias EmptyLocalizedStrings = WMFEmptyViewModel.LocalizedStrings
-        public typealias TooltipLocalizedStrings = WMFTooltipViewModel.LocalizedStrings
         public typealias ErrorLocalizedStrings = WMFErrorViewModel.LocalizedStrings
 
 		public struct OnboardingStrings {
@@ -41,16 +40,32 @@ public final class WMFImageRecommendationsViewModel: ObservableObject {
 				self.learnMoreButton = learnMoreButton
 			}
 		}
+        
+        public struct TooltipStrings {
+            let tooltip1Title: String
+            let tooltip1Body: String
+            let tooltip2Title: String
+            let tooltip2Body: String
+            let tooltip3Title: String
+            let tooltip3Body: String
+            
+            public init(tooltip1Title: String, tooltip1Body: String, tooltip2Title: String, tooltip2Body: String, tooltip3Title: String, tooltip3Body: String) {
+                self.tooltip1Title = tooltip1Title
+                self.tooltip1Body = tooltip1Body
+                self.tooltip2Title = tooltip2Title
+                self.tooltip2Body = tooltip2Body
+                self.tooltip3Title = tooltip3Title
+                self.tooltip3Body = tooltip3Body
+            }
+        }
 
         let title: String
         let viewArticle: String
 		let onboardingStrings: OnboardingStrings
+        let tooltipStrings: TooltipStrings
         let surveyLocalizedStrings: SurveyLocalizedStrings
         let emptyLocalizedStrings: EmptyLocalizedStrings
         let errorLocalizedStrings: ErrorLocalizedStrings
-        let firstTooltipStrings: TooltipLocalizedStrings
-        let secondTooltipStrings: TooltipLocalizedStrings
-        let thirdTooltipStrings: TooltipLocalizedStrings
         let bottomSheetTitle: String
         let yesButtonTitle: String
         let noButtonTitle: String
@@ -59,16 +74,14 @@ public final class WMFImageRecommendationsViewModel: ObservableObject {
         let tutorialButtonTitle: String
         let problemWithFeatureButtonTitle: String
 
-        public init(title: String, viewArticle: String, onboardingStrings: OnboardingStrings, surveyLocalizedStrings: SurveyLocalizedStrings, emptyLocalizedStrings: EmptyLocalizedStrings, errorLocalizedStrings: ErrorLocalizedStrings, firstTooltipStrings: TooltipLocalizedStrings, secondTooltipStrings: TooltipLocalizedStrings, thirdTooltipStrings: TooltipLocalizedStrings, bottomSheetTitle: String, yesButtonTitle: String, noButtonTitle: String, notSureButtonTitle: String, learnMoreButtonTitle: String, tutorialButtonTitle: String, problemWithFeatureButtonTitle: String) {
+        public init(title: String, viewArticle: String, onboardingStrings: OnboardingStrings, tooltipStrings: TooltipStrings, surveyLocalizedStrings: SurveyLocalizedStrings, emptyLocalizedStrings: EmptyLocalizedStrings, errorLocalizedStrings: ErrorLocalizedStrings, bottomSheetTitle: String, yesButtonTitle: String, noButtonTitle: String, notSureButtonTitle: String, learnMoreButtonTitle: String, tutorialButtonTitle: String, problemWithFeatureButtonTitle: String) {
             self.title = title
             self.viewArticle = viewArticle
             self.onboardingStrings = onboardingStrings
+            self.tooltipStrings = tooltipStrings
             self.surveyLocalizedStrings = surveyLocalizedStrings
             self.emptyLocalizedStrings = emptyLocalizedStrings
             self.errorLocalizedStrings = errorLocalizedStrings
-            self.firstTooltipStrings = firstTooltipStrings
-            self.secondTooltipStrings = secondTooltipStrings
-            self.thirdTooltipStrings = thirdTooltipStrings
             self.bottomSheetTitle = bottomSheetTitle
             self.yesButtonTitle = yesButtonTitle
             self.noButtonTitle = noButtonTitle
@@ -167,8 +180,8 @@ public final class WMFImageRecommendationsViewModel: ObservableObject {
         self.surveyOptions = surveyOptions
         self.needsSuppressPosting = needsSuppressPosting
         self.growthTasksDataController = WMFGrowthTasksDataController(project: project)
-        self.articleSummaryDataController = WMFArticleSummaryDataController()
-        self.imageDataController = WMFImageDataController()
+        self.articleSummaryDataController = WMFArticleSummaryDataController.shared
+        self.imageDataController = WMFImageDataController.shared
         self.imageRecommendationsDataController = WMFImageRecommendationsDataController()
         
         $loading
@@ -329,14 +342,12 @@ public final class WMFImageRecommendationsViewModel: ObservableObject {
 
     private func populateCurrentArticleSummary(for imageRecommendation: ImageRecommendation, completion: @escaping (Error?) -> Void) {
         
-        articleSummaryDataController.fetchArticleSummary(project: project, title: imageRecommendation.title) { result in
-            
-            switch result {
-            case .success(let summary):
+        Task {
+            do {
+                let summary = try await articleSummaryDataController.fetchArticleSummary(project: project, title: imageRecommendation.title)
                 imageRecommendation.articleSummary = summary
                 completion(nil)
-                
-            case .failure(let error):
+            } catch {
                 completion(error)
             }
         }
@@ -349,13 +360,12 @@ public final class WMFImageRecommendationsViewModel: ObservableObject {
             return
         }
         
-        imageDataController.fetchImageData(url: url) { result in
-            switch result {
-            case .success(let data):
-                let image = UIImage(data: data)
-                imageData.uiImage = image
+        Task {
+            do {
+                let data = try await imageDataController.fetchImageData(url: url)
+                imageData.uiImage = UIImage(data: data)
                 completion(nil)
-            case .failure(let error):
+            } catch {
                 completion(error)
             }
         }

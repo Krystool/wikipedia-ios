@@ -1,6 +1,7 @@
 import WMF
 import WMFData
 import CocoaLumberjackSwift
+import WidgetKit
 
 extension ArticleViewController {
     
@@ -15,8 +16,9 @@ extension ArticleViewController {
            let wmfProject = project.wmfProject {
             Task {
                 do {
+                    let timestamp = Date()
                     let pageViewsDataController = try WMFPageViewsDataController()
-                    let objectID = try await pageViewsDataController.addPageView(title: title, namespaceID: Int16(namespace.rawValue), project: wmfProject, previousPageViewObjectID: previousPageViewObjectID)
+                    let objectID = try await pageViewsDataController.addPageView(title: title, namespaceID: Int16(namespace.rawValue), project: wmfProject, previousPageViewObjectID: previousPageViewObjectID, timestamp: timestamp)
                     self.pageViewObjectID = objectID
                     self.trackBeganViewingDate()
                 } catch let error {

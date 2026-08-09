@@ -12,7 +12,6 @@ static NSString *const kWMFURLsKey = @"urls";
 static NSString *const kWMFURLsFeedbackKey = @"feedback";
 static NSString *const kWMFURLsTranslateWikiKey = @"twn";
 static NSString *const kWMFURLsWikimediaKey = @"wmf";
-static NSString *const kWMFURLsSpecialistGuildKey = @"tsg";
 static NSString *const kWMFURLsMITKey = @"mit";
 static NSString *const kWMFURLsShareAlikeKey = @"sharealike";
 static NSString *const kWMFURLsAppleMapsKey = @"applemaps";
@@ -168,6 +167,7 @@ static NSString *const kWMFContributorsKey = @"contributors";
 }
 
 - (void)didTapTitleViewWithGestureRecognizer:(UITapGestureRecognizer *)tapGestureRecognizer {
+
     self.titleLabelTappedCount += 1;
 
     if (self.titleLabelTappedCount >= 7) {
@@ -187,7 +187,7 @@ static NSString *const kWMFContributorsKey = @"contributors";
     if ([self isDisplayingLicense]) {
         return WMFLocalizedStringWithDefaultValue(@"about-libraries-license", nil, nil, @"License", @"About page link title that will display a license for a library used in the app {{Identical|License}}");
     }
-    return WMFLocalizedStringWithDefaultValue(@"about-title", nil, nil, @"About", @"Title for credits page {{Identical|About}}");
+    return [WMFCommonStringsWrapper aboutTitle];
 }
 
 #pragma mark - Developer Settings
@@ -204,17 +204,9 @@ static NSString *const kWMFContributorsKey = @"contributors";
 
     NSString *forceEmailAuth = WMFLocalizedStringWithDefaultValue(@"developer-force-email-auth", nil, nil, @"Force email auth", @"Title for option to force email auth in developer settings menu.");
 
-    NSString *setActivityTabGroupA = WMFLocalizedStringWithDefaultValue(@"developer-settings-activity-tab-group-A", nil, nil, @"Set activity tab to group A", @"Title for option to set activity tab experiment to group A");
-
-    NSString *setActivityTabGroupB = WMFLocalizedStringWithDefaultValue(@"developer-settings-activity-tab-group-B", nil, nil, @"Set activity tab to group B", @"Title for option to set activity tab experiment to group B");
-
-    NSString *setActivityTabGroupC = WMFLocalizedStringWithDefaultValue(@"developer-settings-activity-tab-group-C", nil, nil, @"Set activity tab to group C", @"Title for option to set activity tab experiment to group C");
-
-    NSString *enableMoreDynamicTabsV2GroupB = WMFLocalizedStringWithDefaultValue(@"developer-settings-dynamic-tabs-group-B-v2", nil, nil, @"Enable tabs V2 with group B", @"Title for option to enable tabs for Group B V2");
-
     NSString *enableMoreDynamicTabsV2GroupC = WMFLocalizedStringWithDefaultValue(@"developer-settings-dynamic-tabs-group-C-v2", nil, nil, @"Enable tabs V2 with group C", @"Title for option to enable for Group C V2");
 
-    WMFDeveloperSettingsLocalizedStrings *localizedStrings = [[WMFDeveloperSettingsLocalizedStrings alloc] initWithDeveloperSettings:developerSettings doNotPostImageRecommendations:doNotPostImageRecommendations sendAnalyticsToWMFLabs:sendAnalyticsToWMFLabs enableMoreDynamicTabsV2GroupB:enableMoreDynamicTabsV2GroupB enableMoreDynamicTabsV2GroupC:enableMoreDynamicTabsV2GroupC enableYearinReview:enableYearInReview bypassDonation:bypassDonation forceEmailAuth:forceEmailAuth setActivityTabGroupA:setActivityTabGroupA setActivityTabGroupB:setActivityTabGroupB setActivityTabGroupC:setActivityTabGroupC done:WMFCommonStrings.doneTitle];
+    WMFDeveloperSettingsLocalizedStrings *localizedStrings = [[WMFDeveloperSettingsLocalizedStrings alloc] initWithDeveloperSettings:developerSettings doNotPostImageRecommendations:doNotPostImageRecommendations sendAnalyticsToWMFLabs:sendAnalyticsToWMFLabs enableMoreDynamicTabsV2GroupC:enableMoreDynamicTabsV2GroupC enableYearinReview:enableYearInReview bypassDonation:bypassDonation forceEmailAuth:forceEmailAuth done:WMFCommonStringsWrapper.doneTitle];
     WMFDeveloperSettingsViewModel *viewModel = [[WMFDeveloperSettingsViewModel alloc] initWithLocalizedStrings:localizedStrings];
 
     WMFDeveloperSettingsViewController *viewController = [[WMFDeveloperSettingsViewController alloc] initWithViewModel:viewModel];
@@ -270,12 +262,11 @@ static NSString *const kWMFContributorsKey = @"contributors";
         [self.webView wmf_setInnerHTML:twnString ofElementId:divId];
     };
 
-    setDivHTML(@"version", [[NSBundle mainBundle] wmf_versionForCurrentBundleIdentifier]);
-    setDivHTML(@"wikipedia", WMFCommonStrings.plainWikipediaName);
+    setDivHTML(@"version", [[NSBundle mainBundle] wmf_appVersion]);
+    setDivHTML(@"wikipedia", WMFCommonStringsWrapper.plainWikipediaName);
     setDivHTML(@"contributors_title", WMFLocalizedStringWithDefaultValue(@"about-contributors", nil, nil, @"Contributors", @"Header text for contributors section of the about page. Is not capitalised for aesthetic reasons, but could be capitalised in translations. {{Identical|Contributor}}"));
     setDivHTML(@"contributors_body", self.contributors);
     setDivHTML(@"translators_title", WMFLocalizedStringWithDefaultValue(@"about-translators", nil, nil, @"Translators", @"Header text for translators section of the about page. Is not capitalised for aesthetic reasons, but could be capitalised in translations. {{Identical|Translator}}"));
-    setDivHTML(@"testers_title", WMFLocalizedStringWithDefaultValue(@"about-testers", nil, nil, @"Testers", @"Header text for (software) testers section of the about page. Is not capitalised for aesthetic reasons, but could be capitalised in translations."));
     setDivHTML(@"libraries_title", WMFLocalizedStringWithDefaultValue(@"about-libraries", nil, nil, @"Libraries used", @"Header text for libraries section (as in a collection of subprograms used to develop software) of the about page. Is not capitalised for aesthetic reasons, but could be capitalised in translations."));
     setDivHTML(@"libraries_body", [[self class] linkHTMLForURLString:@"wmflicense://licenses" title:WMFLocalizedStringWithDefaultValue(@"about-libraries-complete-list", nil, nil, @"Complete list", @"Title for link to complete list of libraries use by the app")]);
     setDivHTML(@"repositories_title", WMFLocalizedStringWithDefaultValue(@"about-repositories", nil, nil, @"Repositories", @"Header text for repositories section of the about page. Is not capitalised for aesthetic reasons, but could be capitalised in translations.  {{Identical|Repository}}"));
@@ -293,7 +284,6 @@ static NSString *const kWMFContributorsKey = @"contributors";
     setDivHTML(@"license_body", [NSString stringWithFormat:WMFLocalizedStringWithDefaultValue(@"about-content-license-details", nil, nil, @"Unless otherwise specified, content is available under a %1$@.", @"Text explaining license of app content. %1$@ is the message {{msg-wikimedia|about-content-license-details-share-alike-license}}."), [[self class] linkHTMLForURLString:self.urls[kWMFURLsShareAlikeKey] title:WMFLocalizedStringWithDefaultValue(@"about-content-license-details-share-alike-license", nil, nil, @"Creative Commons Attribution-ShareAlike License", @"Name of the \"Creative Commons Attribution-ShareAlike\" license")]]);
 
     setDivHTML(@"translators_body", [NSString stringWithFormat:WMFLocalizedStringWithDefaultValue(@"about-translators-details", nil, nil, @"Translated by volunteers at %1$@", @"Description of volunteer translation. %1$@ is translatewiki url."), [[self class] linkHTMLForURLString:self.urls[kWMFURLsTranslateWikiKey] title:[self.urls[kWMFURLsTranslateWikiKey] substringFromIndex:7]]]);
-    setDivHTML(@"testers_body", [NSString stringWithFormat:WMFLocalizedStringWithDefaultValue(@"about-testers-details", nil, nil, @"QA tested by %1$@", @"Description of the Quality Assurance (QA) testers. %1$@ is specialistsguild.org, the website of the testing group."), [[self class] linkHTMLForURLString:self.urls[kWMFURLsSpecialistGuildKey] title:[self.urls[kWMFURLsSpecialistGuildKey] substringFromIndex:7]]]);
 
     setDivHTML(@"footer", [NSString stringWithFormat:WMFLocalizedStringWithDefaultValue(@"about-product-of", nil, nil, @"Made by the %1$@ with the help of volunteers like you", @"Description of who produced the app. %1$@ is the message {{msg-wikimedia|wikipedia-ios-about-wikimedia-foundation}}."), [[self class] linkHTMLForURLString:self.urls[kWMFURLsWikimediaKey] title:WMFLocalizedStringWithDefaultValue(@"about-wikimedia-foundation", nil, nil, @"Wikimedia Foundation", @"Name of the Wikimedia Foundation. Used by the message {{Msg-wikimedia|wikipedia-ios-about-product-of}}.")]]);
 

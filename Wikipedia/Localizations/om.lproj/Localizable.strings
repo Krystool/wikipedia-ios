@@ -30,8 +30,10 @@
 "main-menu-terms-of-use" = "Wayetii fayyadamaa";
 "main-menu-title" = "Dabalata";
 "navbar-title-mode-edit-wikitext-preview" = "Durargii";
+// Fuzzy
 "nearby-distance-label-feet" = "Fiitii $1";
 "nearby-distance-label-km" = "$1 km";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 m";
 "nearby-distance-label-miles" = "Maayilii $1";
 "page-protected-can-not-edit" = "Fuula kana jijjiiruuf mirga hin qabdu";
@@ -40,5 +42,4 @@
 "table-of-contents-button-label" = "Gabatee qabiyyeewwanii";
 "table-of-contents-heading" = "Qabiyyeewwan";
 "wikitext-upload-save" = "Uummataawaara...";
-"wikitext-upload-save-sign-in" = "Seeni";
 "wikitext-upload-save-terms-name" = "Waliigaltee fayyadamaa";

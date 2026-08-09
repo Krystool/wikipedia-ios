@@ -18,6 +18,7 @@ public struct WMFTheme: Equatable {
     public let newBorder: UIColor
     public let paperBackground: UIColor
     public let midBackground: UIColor
+    public let addition: UIColor
     public let baseBackground: UIColor
     public let popoverBackground: UIColor
     public let icon: UIColor
@@ -46,6 +47,11 @@ public struct WMFTheme: Equatable {
     public let navigationBarTintColor: UIColor
     public let secondaryAction: UIColor
     public let darkBorder: UIColor
+    public let toastShadow: UIColor
+    public let tagText: UIColor
+    public let tagBackground: UIColor
+    public let batchSelectionBackground: UIColor
+    public let successGreen: UIColor
 
     public var preferredColorScheme: ColorScheme {
     return (self == WMFTheme.light || self == WMFTheme.sepia) ? .light : .dark
@@ -67,9 +73,10 @@ public struct WMFTheme: Equatable {
         destructive: WMFColor.red600,
         warning: WMFColor.orange600,
         border: WMFColor.gray400,
-        newBorder: WMFColor.gray300,
+        newBorder: WMFColor.gray200,
         paperBackground: WMFColor.white,
         midBackground: WMFColor.gray100,
+        addition: WMFColor.blue300alpha15,
         baseBackground: WMFColor.gray200,
         popoverBackground: WMFColor.white,
         icon: WMFColor.gray300,
@@ -97,7 +104,12 @@ public struct WMFTheme: Equatable {
         chromeBackground: WMFColor.white,
         navigationBarTintColor: WMFColor.blue600,
         secondaryAction: WMFColor.blue700,
-        darkBorder: WMFColor.borderDark5
+        darkBorder: WMFColor.borderDark5,
+        toastShadow: WMFColor.gray400,
+        tagText: WMFColor.blue600,
+        tagBackground: WMFColor.blue600.withAlphaComponent(0.1),
+        batchSelectionBackground: WMFColor.blue100,
+        successGreen: WMFColor.successGreen
     )
 
     public static let sepia = WMFTheme(
@@ -115,6 +127,7 @@ public struct WMFTheme: Equatable {
         newBorder: WMFColor.taupe200,
         paperBackground: WMFColor.beige100,
         midBackground: WMFColor.beige300,
+        addition: WMFColor.blue300alpha15,
         baseBackground: WMFColor.beige400,
         popoverBackground: WMFColor.beige100,
         icon: WMFColor.taupe600,
@@ -142,7 +155,12 @@ public struct WMFTheme: Equatable {
         chromeBackground: WMFColor.beige100,
         navigationBarTintColor: WMFColor.blue600,
         secondaryAction: WMFColor.blue700,
-        darkBorder: WMFColor.borderDark5
+        darkBorder: WMFColor.borderDark5,
+        toastShadow: WMFColor.taupe200,
+        tagText: .white,
+        tagBackground: WMFColor.blue300,
+        batchSelectionBackground: WMFColor.blue100,
+        successGreen: WMFColor.successGreen
     )
 
     public static let dark = WMFTheme(
@@ -160,6 +178,7 @@ public struct WMFTheme: Equatable {
         newBorder: WMFColor.gray500,
         paperBackground: WMFColor.gray675,
         midBackground: WMFColor.gray700,
+        addition: WMFColor.blue600alpha30,
         baseBackground: WMFColor.gray800,
         popoverBackground: WMFColor.gray800,
         icon: WMFColor.gray300,
@@ -187,7 +206,12 @@ public struct WMFTheme: Equatable {
         chromeBackground: WMFColor.gray650,
         navigationBarTintColor: WMFColor.blue300,
         secondaryAction: WMFColor.blue700,
-        darkBorder: WMFColor.borderDark0
+        darkBorder: WMFColor.borderDark0,
+        toastShadow: WMFColor.gray800,
+        tagText: .white,
+        tagBackground: WMFColor.blue300,
+        batchSelectionBackground: WMFColor.blue700,
+        successGreen: WMFColor.successGreen
     )
 
     public static let black = WMFTheme(
@@ -205,6 +229,7 @@ public struct WMFTheme: Equatable {
         newBorder: WMFColor.gray500,
         paperBackground: WMFColor.black,
         midBackground: WMFColor.gray700,
+        addition: WMFColor.blue600alpha30,
         baseBackground: WMFColor.gray800,
         popoverBackground: WMFColor.gray700,
         icon: WMFColor.gray300,
@@ -232,7 +257,11 @@ public struct WMFTheme: Equatable {
         chromeBackground: WMFColor.gray650,
         navigationBarTintColor: WMFColor.blue300,
         secondaryAction: WMFColor.blue700,
-        darkBorder: WMFColor.borderDark0
+        darkBorder: WMFColor.borderDark0,
+        toastShadow: WMFColor.gray600,
+        tagText: .white,
+        tagBackground: WMFColor.blue300,
+        batchSelectionBackground: WMFColor.blue700,
+        successGreen: WMFColor.successGreen
     )
-
 }

@@ -42,8 +42,6 @@
 "about-repositories-app-source-license" = "सोर्स कोड $1 के अंतर्गत उपलब्ध है।";
 "about-repositories-app-source-license-mit" = "एमआईटी लाइसेंस";
 "about-send-feedback" = "एप फीडबैक भेजें";
-"about-testers" = "जांचकर्ता";
-"about-testers-details" = "QA $1 के द्वारा जांचा गया";
 "about-title" = "विवरण";
 "about-translators" = "अनुवादक";
 "about-translators-details" = "$1 पर स्वयंसेवकों द्वारा अनुवादित";
@@ -95,6 +93,7 @@
 "action-unsaved-accessibility-notification" = "असुरक्षित लेख";
 "action-update" = "अद्यतन";
 "activity-tab-title" = "गतिविधि";
+"activity-tab-week-graph-label" = "सप्ताह";
 "add-articles-to-reading-list" = "पठन सूची में{{PLURAL:$1|$1 लेख}} जोड़ें";
 "alt-text-feedback-survey-toast-title" = "प्रतिक्रिया प्रस्तुत की गई";
 "announcements-dismiss" = "रद्द करें";
@@ -123,6 +122,8 @@
 "article-save-error-not-enough-space" = "इस लेख को सहेजने के लिए आपके डिवाइस पर पर्याप्त जगह नहीं है";
 "article-share" = "साझा करें";
 "article-toolbar-reading-themes-controls-toolbar-item" = "विषय नियंत्रण पढ़ रहा";
+"article-topic-entertainment" = "मनोरंजन";
+"article-topic-sports" = "खेल";
 "back-button-accessibility-label" = "पीछे";
 "back-button-popover-title" = "वापस जाने के लिए टैप करें";
 "button-go-back" = "वापस जाएँ";
@@ -173,7 +174,6 @@
 "description-help-title" = "लेख विवरण सहायता";
 "description-help-wikidata-guide" = "विवरण लिखने के लिए विकिडेटा मार्गदर्शिका";
 "description-published-button-title" = "पूर्ण हुआ";
-"description-published-footer" = "आप इस एप में भी लेखों को सम्पादित कर सकते हैं। अगली बार पेंसिल आइकॉन पर क्लिक कर टाइपो और छोटे वाक्य सुधारने का प्रयास करें";
 "description-published-subtitle" = "आपने अभी विकिपीडिया को सभी के लिए और अच्छा बना दिया";
 "description-published-title" = "विवरण प्रकाशित";
 "description-welcome-concise-sub-title" = "एक लाइन, दो से बारह शब्दों की उपयुक्त है";
@@ -182,8 +182,6 @@
 "description-welcome-descriptions-title" = "लेख विवरण";
 "description-welcome-promise-title" = "शुरू करने से, मैं यह वादा करता हूँ कि इस सुविधा का दुरुपयोग नहीं करूँगा(गी)।";
 "description-welcome-start-editing-button" = "संपादन शुरू करें";
-// Fuzzy
-"did-you-know" = "क्या आप जानते हैं";
 // Fuzzy
 "diff-compare-header-from-info-heading" = "मूल";
 "diff-compare-header-heading" = "अवतरणों की तुलना करें";
@@ -270,12 +268,10 @@
 "forgot-password-instructions" = "ईमेल द्वारा पासवर्ड रिसेट निर्देश प्राप्त करने के लिए नीचे दी गईं फ़ील्ड्स में से एक को भरें";
 "forgot-password-title" = "पासवर्ड रिसेट करें";
 "forgot-password-username-or-email-title" = "या";
-"history-clear-all" = "साफ करें";
 "history-clear-confirmation-heading" = "क्या आप वास्तव में आपके सभी हाल के आइटम्स को मिटाना चाहते हैं?";
 "history-clear-delete-all" = "हाँ, सभी मिटायें";
 "history-title" = "इतिहास";
 "home-button-explore-accessibility-label" = "विकिपीडिया, खोज पर लौटें";
-"home-button-history-accessibility-label" = "विकिपीडीया, इतिहास पर लौटें";
 "home-button-saved-accessibility-label" = "विकिपीडिया, सहेजे गए पर लौटें";
 "home-more-like-footer" = "$1 के समान";
 "home-nearby-footer" = "आपके स्थान के आस-पास के और स्थान";
@@ -291,7 +287,6 @@
 "image-gallery-unknown-owner" = "अज्ञात लेखक";
 "image-rec-error-subtitle" = "कोई त्रुटि आई।";
 "import-shared-reading-list-survey-prompt-button-take-survey" = "सर्वे लें";
-"import-shared-reading-list-survey-prompt-footer" = "हमारी $1गोपनीयता स्टेटमेंट$2 देखें. सर्वे एक थर्ड पार्टी के ज़रिए पावर किया गया है. उनकी $3गोपनीयता नीति$4 देखें.";
 // Fuzzy
 "import-shared-reading-list-survey-prompt-subtitle" = "\"पठन सूचियाँ बाँटें\" एक टेस्ट फीचर है और उसे सुधरने या हटाने में आपकी फीडबैक की जरूरत है।";
 // Fuzzy
@@ -319,11 +314,12 @@
 "more-languages-tooltip-description" = "विकिपीडिया को 300 से अधिक भाषाओं में खोजें";
 "more-languages-tooltip-title" = "भाषाएँ जोड़ें";
 "navbar-title-mode-edit-wikitext-preview" = "पूर्वावलोकन";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 फिट";
 "nearby-distance-label-km" = "$1 कि.मी.";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 मीटर";
 "nearby-distance-label-miles" = "$1 माइल्स";
-"new-article-tab-settings-did-you-know" = "क्या आप जानते हैं?";
 "new-password-instructions" = "अपने एक अस्थाई पासवर्ड से लॉगिन किया। लॉगिन को पूरा करने के लिए यहाँ एक नया पासवर्ड जोड़ें।";
 "new-password-title" = "एक पासवर्ड जोड़ें";
 "next-action-title" = "अगला";
@@ -414,7 +410,6 @@
 "saved-title" = "सहेजा गया";
 "search-button-accessibility-label" = "विकिपीडिया में खोजें";
 "search-field-placeholder-text" = "विकिपीडिया में खोजें";
-"search-reading-list-placeholder-text" = "पठन सूची खोजें";
 "search-recent-clear-confirmation-heading" = "हाल की सभी खोजों को मिटायें?";
 "search-recent-clear-confirmation-sub-heading" = "इस क्रिया को वापस नहीं लिया जा सकता!";
 "search-recent-clear-delete-all" = "सभी हटाएँ";
@@ -435,15 +430,12 @@
 "settings-my-languages" = "मेरी भाषाएँ";
 "settings-notifications" = "पुश नोटिफिकेशन्स";
 "settings-notifications-echo-failure-try-again" = "पुनः प्रयास करें";
-"settings-notifications-info" = "हमारे पुश नोटिफिकेशन्स के साथ रुझानों में और सर्वाधिक पढ़े गए विकिपीडिया लेखों के बारे में सजग रहें। यह सब आपकी निजता का सम्मान करते और बारीक डेटा के साथ प्रदान किया जाता है।";
-"settings-notifications-learn-more" = "नोटिफिकेशन्स के बारे में अधिक जानें";
-"settings-notifications-push-notifications" = "पुश नोटिफिकेशन्स";
-"settings-notifications-system-turn-on" = "नोटिफिकेशन्स चालू करें";
-"settings-notifications-trending" = "रुझानों में हाल की घटनाएं";
 "settings-off" = "बंद";
 "settings-on" = "चालू";
 "settings-primary-language" = "प्राथमिक";
 "settings-primary-language-details" = "इस सूची में पहली भाषा का उपयोग ऐप के लिए प्राथमिक भाषा के रूप में किया जाता है।";
+"settings-storage-and-syncing-disable-sync-alert-no" = "नहीं";
+"settings-storage-and-syncing-disable-sync-alert-yes" = "हाँ";
 "settings-title" = "सेटिंग्स";
 "share-a-fact-made-with" = "विकिपीडिया एप के साथ बनाया गया";
 "share-article-name-on-wikipedia" = "विकिपीडिया पर \" $1 \" :";
@@ -505,9 +497,6 @@
 "welcome-languages-add-or-edit-button" = "पसंदीदा भाषाओं को जोड़ें या संपादित करें";
 "welcome-languages-description" = "हमें आपकी डिवाइस पर निम्न भाषाएँ मिली हैं:";
 "welcome-languages-search-title" = "300 से अधिक भाषाओं में खोजें";
-"welcome-notifications-tell-me-more-creation" = "आप की डिवाइस पर नोटिफिकेशन एप द्वारा बनाये और भेजे जाते हैं, न कि हमारे (या थर्ड पार्टी) सर्वर्स द्वारा।";
-"welcome-notifications-tell-me-more-storage" = "नोटिफिकेशन वरीयताएं डिवाइस पर स्टोर की जातीं हैं और ये व्यक्तिगत जानकारी या क्रियाकलाप पर आधारित नहीं हैं।";
-"welcome-notifications-tell-me-more-title" = "नोटिफिकेशन्स के बारे में अधिक";
 "wikitext-preview-changes" = "आपके बदलावों का प्रीव्यू लाया जा रहा है...";
 "wikitext-preview-link-preview-description" = "यह लिंक $1 पर ले जाता है";
 "wikitext-preview-link-preview-title" = "लिंक प्रीव्यू";
@@ -516,6 +505,5 @@
 "wikitext-upload-result-unknown" = "विकिटेक्सट के अपलोड परिणाम बताने में असमर्थ।";
 "wikitext-upload-save" = "प्रकाशित किया जा रहा है...";
 "wikitext-upload-save-anonymously-warning" = "आपकी डिवाइस के आईपी एड्रेस को सम्पादनों श्रेय दिया जायेगा। अगर आप $1 चुनते हैं तो अधिक गोपनीयता प्राप्त होगी।";
-"wikitext-upload-save-sign-in" = "प्रवेश";
 "wikitext-upload-save-terms-name" = "उपयोग की शर्तें";
 "year-in-review-donate" = "दान करें";

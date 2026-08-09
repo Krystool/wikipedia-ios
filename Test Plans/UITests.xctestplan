@@ -2,11 +2,46 @@
   "configurations" : [
     {
       "id" : "8E0498FE-92FF-40EC-865C-5BEA22044FC7",
-      "name" : "System Language (Light)",
+      "name" : "English (Light)",
       "options" : {
         "commandLineArgumentEntries" : [
           {
-            "argument" : "UITestThemeLight"
+            "argument" : "-WMFAppThemeName"
+          },
+          {
+            "argument" : "light"
+          },
+          {
+            "argument" : "-WMFUITestLanguageCode"
+          },
+          {
+            "argument" : "en"
+          }
+        ]
+      }
+    },
+    {
+      "id" : "38077FAF-FC51-4296-BF85-0FB00F0EE6F5",
+      "name" : "English (Light, E2E)",
+      "options" : {
+        "commandLineArgumentEntries" : [
+          {
+            "argument" : "-WMFAppThemeName"
+          },
+          {
+            "argument" : "light"
+          },
+          {
+            "argument" : "-WMFUITestLanguageCode"
+          },
+          {
+            "argument" : "en"
+          },
+          {
+            "argument" : "-WMFTestHTTPClientProfile"
+          },
+          {
+            "argument" : "e2e"
           }
         ]
       }
@@ -17,7 +52,16 @@
       "options" : {
         "commandLineArgumentEntries" : [
           {
-            "argument" : "UITestThemeSepia"
+            "argument" : "-WMFAppThemeName"
+          },
+          {
+            "argument" : "sepia"
+          },
+          {
+            "argument" : "-WMFUITestLanguageCode"
+          },
+          {
+            "argument" : "he"
           }
         ],
         "language" : "he",
@@ -30,7 +74,16 @@
       "options" : {
         "commandLineArgumentEntries" : [
           {
-            "argument" : "UITestThemeDark"
+            "argument" : "-WMFAppThemeName"
+          },
+          {
+            "argument" : "dark"
+          },
+          {
+            "argument" : "-WMFUITestLanguageCode"
+          },
+          {
+            "argument" : "de"
           }
         ],
         "language" : "de",
@@ -43,7 +96,16 @@
       "options" : {
         "commandLineArgumentEntries" : [
           {
-            "argument" : "UITestThemeBlack"
+            "argument" : "-WMFAppThemeName"
+          },
+          {
+            "argument" : "black"
+          },
+          {
+            "argument" : "-WMFUITestLanguageCode"
+          },
+          {
+            "argument" : "vi"
           }
         ],
         "language" : "vi",
@@ -52,6 +114,7 @@
     }
   ],
   "defaultOptions" : {
+    "codeCoverage" : true,
     "language" : "en",
     "region" : "US",
     "testTimeoutsEnabled" : true,
@@ -59,9 +122,6 @@
   },
   "testTargets" : [
     {
-      "skippedTests" : [
-        "WikipediaUITests"
-      ],
       "target" : {
         "containerPath" : "container:Wikipedia.xcodeproj",
         "identifier" : "67623E0B2AFD288A007488C7",

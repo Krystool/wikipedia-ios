@@ -27,6 +27,7 @@
 "action-next-revision-accessibility" = "Нусхаи баъдӣ";
 "action-previous-revision-accessibility" = "Нусхаи қаблӣ";
 "action-thank-user-accessibility" = "Ташаккур кардани корбар";
+// Fuzzy
 "activity-tab-logged-out-title" = "Барои дидани виришҳо ва хониши бештар ворид шавед ё ҳисоб эҷод кунед.";
 "article-delete" = "Ҳазф кардан";
 // Fuzzy
@@ -82,8 +83,10 @@
 "main-menu-terms-of-use" = "Шартҳои истифода";
 "main-menu-title" = "Бештар";
 "navbar-title-mode-edit-wikitext-preview" = "Пешнамоиш";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 фут";
 "nearby-distance-label-km" = "$1 км";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 м";
 "nearby-distance-label-miles" = "$1 мил";
 "page-history-bot-edits" = "вироишоти роботҳо";
@@ -113,4 +116,3 @@
 "wikitext-preview-changes" = "Фарохонии пешнамоиши тағийроти шумо...";
 // Fuzzy
 "wikitext-upload-save" = "Дар ҳоли захиракунӣ...";
-"wikitext-upload-save-sign-in" = "Вуруд";

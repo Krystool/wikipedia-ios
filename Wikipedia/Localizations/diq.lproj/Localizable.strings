@@ -12,7 +12,6 @@
 "about-content-license" = "Lisansê zerreki";
 "about-contributors" = "İştırakkeri";
 "about-libraries-license" = "Lisans";
-"about-testers" = "Testkerdoği";
 "about-title" = "Heqa";
 "about-translators" = "Çarnayoği";
 "about-wikipedia" = "Wikipediya";
@@ -59,7 +58,6 @@
 "edit-menu-item" = "Bıvurne";
 "edit-minor-learn-more-text" = "Heqa vurnayışanê qıcan de tayêna bımuse";
 "edit-minor-text" = "No yew vırnayışo werdiyo";
-"edit-published" = "Vurnayış qeyd bi";
 "edit-watch-this-page-text" = "Ena pele seyr ke";
 // Fuzzy
 "empty-insert-media-title" = "Yew dosya weçine";
@@ -71,10 +69,13 @@
 "find-textfield-accessibility" = "Bıvêne";
 "forgot-password-button-title" = "Raçarne";
 "forgot-password-title" = "Parola newe ke";
-"history-clear-all" = "Pak ke";
+"games-announcement-play-button" = "Bıcıne";
 "history-clear-confirmation-heading" = "Şıma qayılê vêrdey xo pêro besterê?";
 "history-clear-delete-all" = "Eya, pêro bestere";
 "history-title" = "Tarix";
+"home-community-tab-title" = "Cemaet";
+"home-edit-languages-title" = "Zıwan cı kerê ya zi bıvurnê";
+"home-tab-title" = "Keye";
 "icon-shortcut-nearby-title" = "Nezdıra wesiqey";
 "icon-shortcut-random-title" = "Nuşteyo raştameye";
 "insert-media-alternative-text-title" = "Metıno alternatif";
@@ -102,8 +103,10 @@
 "main-menu-terms-of-use" = "Şertê gurenayışi";
 "main-menu-title" = "Zêde";
 "navbar-title-mode-edit-wikitext-preview" = "Verqayt";
+// Fuzzy
 "nearby-distance-label-feet" = "$1 fit";
 "nearby-distance-label-km" = "$1 km";
+// Fuzzy
 "nearby-distance-label-meters" = "$1 metre";
 "nearby-distance-label-miles" = "$1 mil";
 "no-internet-connection" = "Gıredayışê interneti çıniyo";
@@ -150,8 +153,10 @@
 "theme-light-display-name" = "Akerde";
 "theme-sepia-display-name" = "Sepia";
 "welcome-explore-continue-button" = "Dest pêke";
+"which-came-first-correct-feedback" = "Raşt!";
+"which-came-first-log-in-button" = "Cı kewe";
 "wikitext-preview-changes" = "Verqaytê vıriyayış dê şıma yo arêno...";
 "wikitext-preview-save-changes-title" = "Vurnayışan qeyd ke";
 "wikitext-upload-save" = "Weşaniyeno...";
-"wikitext-upload-save-sign-in" = "Cı kewe";
 "wikitext-upload-save-terms-name" = "Şertê gurenayışi";
+"wmf-localizations-tests-nonexistent-key" = "peyserardış";
